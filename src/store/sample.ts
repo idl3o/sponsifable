@@ -54,7 +54,8 @@ export const SAMPLE_PROSPECTS: Prospect[] = [
     contactEmail: '',
     budgetBand: [3_000, 12_000],
     sellsInto: ['tier1', 'tier2'],
-    evidence: 'Sponsored several developer-tooling channels through 2025 and 2026.',
+    evidence:
+      'Sponsored several developer-tooling channels through 2025 and 2026, e.g. https://example.com/linear-integration',
     stage: 'researching',
     lastContactedOn: '',
     notes: 'Find the person who runs creator marketing before pitching.',

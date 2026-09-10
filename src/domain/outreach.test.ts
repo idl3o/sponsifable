@@ -185,6 +185,42 @@ describe('nextAction', () => {
   });
 });
 
+describe('claims the tool cannot back', () => {
+  const noGeo: CreatorProfile = { ...profile, geo: { tier1: 0, tier2: 0, tier3: 0 } };
+
+  it('never tells a sponsor about a geography nobody recorded', () => {
+    const body = composePitch(noGeo, prospect, priceLine(noGeo, channel, 'integration')).body;
+    expect(body).not.toContain('top-spend markets');
+  });
+
+  it('tells the creator, not the sponsor, that the geography is assumed', () => {
+    const geo = priceLine(noGeo, channel, 'integration').adjustments.find(
+      (a) => a.label === 'Audience geography',
+    );
+    expect(geo?.rationale).toContain('No audience geography recorded');
+    expect(geo?.rationale).not.toMatch(/\d+% of the audience/);
+  });
+
+  it('heads the facts with a count that matches them', () => {
+    const quiet: CreatorProfile = {
+      ...noGeo,
+      channels: [{ ...channel, engagementRate: 0 }],
+    };
+    const body = composePitch(quiet, prospect, priceLine(quiet, quiet.channels[0] ?? channel, 'integration')).body;
+    expect(body).toContain('One thing worth knowing:');
+    expect(body).not.toContain('Three things');
+  });
+
+  it('scores a linked claim above an unlinked one, whatever its length', () => {
+    const essay = 'x'.repeat(400);
+    const unlinked = scoreProspect(profile, { ...prospect, evidence: essay }, ask);
+    const linked = scoreProspect(profile, { ...prospect, evidence: 'https://example.com/ad' }, ask);
+    const note = (fit: typeof linked) =>
+      fit.components.find((c) => c.label === 'Sponsors creators')?.score ?? -1;
+    expect(note(linked)).toBeGreaterThan(note(unlinked));
+  });
+});
+
 describe('composePitch when the production floor binds', () => {
   const nano: Channel = { ...channel, followers: 4_000, medianViews: 900, engagementRate: 0.045 };
   const nanoProfile: CreatorProfile = { ...profile, channels: [nano] };

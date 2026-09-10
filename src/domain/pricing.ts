@@ -31,10 +31,16 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+/** True when the creator has recorded any audience geography at all. */
+export function hasGeo(geo: GeoSplit): boolean {
+  return geo.tier1 + geo.tier2 + geo.tier3 > 0;
+}
+
 /**
  * Normalise a geography split to shares summing to 1.
  * An all-zero split falls back to an all-tier-1 assumption, which is the
- * optimistic reading. The media kit flags it rather than hiding it.
+ * optimistic reading. It is a pricing placeholder, never a claim: the media kit
+ * flags it, and nothing addressed to a sponsor may state it as a fact.
  */
 export function normaliseGeo(geo: GeoSplit): GeoSplit {
   const total = geo.tier1 + geo.tier2 + geo.tier3;
@@ -109,20 +115,24 @@ function engagementRationale(factor: number): string {
   return 'Engagement tracks the platform median.';
 }
 
+/** Describe the geography multiplier, without inventing a split nobody recorded. */
+function geoRationale(geo: GeoSplit): string {
+  if (!hasGeo(geo)) {
+    return 'No audience geography recorded, so this assumes a top-spend audience. Fill in the split before quoting this line.';
+  }
+  const tier1Pct = Math.round(normaliseGeo(geo).tier1 * 100);
+  return `${tier1Pct}% of the audience sits in the highest-spending advertising markets.`;
+}
+
 /** Audience-quality and category adjustments that apply to every deal. */
 function audienceAdjustments(profile: CreatorProfile, channel: Channel): Adjustment[] {
   const niche = NICHE_MULTIPLIER[profile.niche];
   const geo = geoFactor(profile.geo);
   const engagement = engagementFactor(channel);
-  const tier1Pct = Math.round(normaliseGeo(profile.geo).tier1 * 100);
 
   return [
     { label: 'Category demand', factor: niche, rationale: nicheRationale(niche) },
-    {
-      label: 'Audience geography',
-      factor: geo,
-      rationale: `${tier1Pct}% of the audience sits in markets where this sponsor can actually sell.`,
-    },
+    { label: 'Audience geography', factor: geo, rationale: geoRationale(profile.geo) },
     {
       label: 'Engagement vs platform norm',
       factor: engagement,

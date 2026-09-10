@@ -59,6 +59,15 @@ function priceSentence(ask: RateLine): string {
   return `I have a ${format} on ${platform} available at ${gbp(ask.target)}. That prices the placement at roughly ${gbp(cpm)} per thousand impressions against ${views} median views.`;
 }
 
+const COUNT_WORD = ['', 'One thing', 'Two things', 'Three things'] as const;
+
+/** The bulleted facts, headed by a count that matches what follows. */
+function evidenceBlock(evidence: string[]): string[] {
+  const heading = COUNT_WORD[evidence.length];
+  if (!heading) return [];
+  return ['', `${heading} worth knowing:`, ...evidence.map((line) => `- ${line}`)];
+}
+
 /**
  * Compose the opening pitch to a prospect.
  *
@@ -74,9 +83,7 @@ export function composePitch(profile: CreatorProfile, prospect: Prospect, ask: R
     greeting,
     '',
     `I make ${NICHE_LABEL[profile.niche].toLowerCase()} content for ${audienceLine(profile)}, and ${prospect.product} is the kind of thing they ask me about directly.`,
-    '',
-    'Three things worth knowing:',
-    ...evidence.map((line) => `- ${line}`),
+    ...evidenceBlock(evidence),
     '',
     priceSentence(ask),
   ];

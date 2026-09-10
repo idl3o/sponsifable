@@ -1,5 +1,13 @@
 import { normaliseGeo } from './pricing';
-import type { CreatorProfile, FitScore, GeoSplit, Niche, Prospect, RateLine } from './types';
+import type {
+  CreatorProfile,
+  FitScore,
+  GeoSplit,
+  Niche,
+  Prospect,
+  RateLine,
+  Verdict,
+} from './types';
 
 /**
  * Prospect fit scoring.
@@ -86,19 +94,41 @@ function scoreBudget(prospect: Prospect, ask: RateLine | undefined): { score: nu
   return { score: 12, note: 'Their budget lands between the walk-away and target price. Expect a negotiation.' };
 }
 
-/** Score recorded evidence that this brand already pays creators. */
+/** Links in a block of free text. A link is something another person can check. */
+function countLinks(text: string): number {
+  return (text.match(/https?:\/\/\S+/g) ?? []).length;
+}
+
+/**
+ * Score recorded evidence that this brand already pays creators.
+ *
+ * The question is whether there is anything to check, not how much was typed.
+ * A note is a belief; a link to a placement they paid for is evidence. Neither
+ * is verified by this tool, and the notes say so.
+ */
 function scoreEvidence(prospect: Prospect): { score: number; note: string } {
-  const length = prospect.evidence.trim().length;
-  if (length === 0) {
+  const text = prospect.evidence.trim();
+  if (text.length === 0) {
     return {
       score: 0,
       note: 'No evidence recorded that this brand sponsors creators at all. Check before spending a pitch on them.',
     };
   }
-  if (length < 40) {
-    return { score: 10, note: 'Some evidence recorded, though thin. Self-reported, not verified.' };
+  if (countLinks(text) === 0) {
+    return {
+      score: 10,
+      note: 'A note, but nothing linked. Add a link to a placement they paid for, so the claim can be checked.',
+    };
   }
-  return { score: MAX_EVIDENCE, note: 'Documented history of sponsoring creators. Self-reported, not verified.' };
+  return {
+    score: MAX_EVIDENCE,
+    note: 'Linked evidence of a paid placement. Checkable, though not checked by this tool.',
+  };
+}
+
+/** The verdict band a fit total falls in. */
+export function verdictFor(total: number): Verdict {
+  return total >= 70 ? 'strong' : total >= 45 ? 'worth-a-shot' : 'weak';
 }
 
 /**
@@ -124,11 +154,7 @@ export function scoreProspect(
   ];
 
   const total = components.reduce((sum, c) => sum + c.score, 0);
-  return {
-    total,
-    components,
-    verdict: total >= 70 ? 'strong' : total >= 45 ? 'worth-a-shot' : 'weak',
-  };
+  return { total, components, verdict: verdictFor(total) };
 }
 
 /** Order prospects by fit, strongest first. Stable for equal scores. */

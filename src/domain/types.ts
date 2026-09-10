@@ -181,9 +181,11 @@ export interface Prospect {
   notes: string;
 }
 
+export type Verdict = 'strong' | 'worth-a-shot' | 'weak';
+
 export interface FitScore {
   /** 0..100. */
   total: number;
   components: Array<{ label: string; score: number; max: number; note: string }>;
-  verdict: 'strong' | 'worth-a-shot' | 'weak';
+  verdict: Verdict;
 }

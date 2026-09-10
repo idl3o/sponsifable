@@ -1,5 +1,5 @@
 import { PLATFORM_LABEL, REACH_RATIO_FLOOR } from './benchmarks';
-import { normaliseGeo } from './pricing';
+import { hasGeo, normaliseGeo } from './pricing';
 import type { Channel, CreatorProfile } from './types';
 
 /**
@@ -126,7 +126,9 @@ export function headlineEvidence(profile: CreatorProfile): string[] {
       `${(summary.blendedEngagement * 100).toFixed(1)}% engagement rate across ${profile.channels.length} channel${profile.channels.length === 1 ? '' : 's'}`,
     );
   }
-  if (summary.tier1Share > 0) {
+  // The all-tier-1 fallback prices an unrecorded split; it must never reach a
+  // sponsor as a statement about the audience.
+  if (hasGeo(profile.geo) && summary.tier1Share > 0) {
     facts.push(`${Math.round(summary.tier1Share * 100)}% of the audience in top-spend markets`);
   }
 
