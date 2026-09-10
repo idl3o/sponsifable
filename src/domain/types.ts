@@ -189,3 +189,88 @@ export interface FitScore {
   components: Array<{ label: string; score: number; max: number; note: string }>;
   verdict: Verdict;
 }
+
+export type DealOutcome = 'won' | 'lost';
+
+export type LostReason = 'budget' | 'timing' | 'no-reply' | 'poor-fit' | 'i-declined' | 'other';
+
+/**
+ * A closed conversation, frozen at the moment it closed.
+ *
+ * Everything the price depended on is copied in rather than referenced, so the
+ * record still means the same thing after the profile, the prospect or the
+ * benchmarks change. Won deals are the ground truth the benchmarks lack; lost
+ * deals are the half of it no public rate survey ever sees.
+ */
+export interface Deal {
+  id: string;
+  /** The prospect this closed, which may since have been deleted. */
+  prospectId: string;
+  brand: string;
+  outcome: DealOutcome;
+  /** Why it was lost. Null when won. */
+  lostReason: LostReason | null;
+  /** ISO date the outcome was recorded. */
+  closedOn: string;
+  platform: Platform;
+  format: Format;
+  niche: Niche;
+  geo: GeoSplit;
+  followers: number;
+  medianViews: number;
+  engagementRate: number;
+  terms: DealTerms;
+  /**
+   * Days of paid running the licence granted, counted from the first paid run.
+   * Frozen at close, because the licence is what was agreed, not what the
+   * benchmarks later say the tier means. Null means unlimited.
+   */
+  paidUsageDays: number | null;
+  /** The tool's target price when the deal closed, in GBP. */
+  quoted: number;
+  flooredByProduction: boolean;
+  /** Fit score when the outcome was recorded, 0..100. */
+  fitAtClose: number;
+  /** GBP actually agreed. Zero when lost. */
+  agreed: number;
+  /** ISO date the asset was delivered, or empty. */
+  deliveredOn: string;
+  /** ISO date the invoice was paid, or empty. */
+  paidOn: string;
+  /** Present only when the creator chose to seal the delivered asset. */
+  seal: SealSummary | null;
+  sightings: Sighting[];
+  notes: string;
+}
+
+/**
+ * What the `sponsorable seal` CLI records about a sealed asset. The full signed
+ * receipt lives in the CLI's ledger and with the sponsor; this is enough for
+ * the app to show the deal is sealed and to match a verified sighting.
+ */
+export interface SealSummary {
+  /** Watermark payload, hex. A pointer to the receipt, never the terms. */
+  serial: string;
+  /** SHA-256 of the canonical receipt, hex. */
+  commitment: string;
+  sealedOn: string;
+  /** ISO timestamp from the timestamp authority. */
+  timestampedAt: string;
+}
+
+/** A paid ad found running the creator's asset, e.g. in a public ad library. */
+export interface Sighting {
+  id: string;
+  /** Where it was seen: an ad library link or a note. */
+  source: string;
+  /** The date the ad library says the ad started running. */
+  startedOn: string;
+  /** The date it was last seen still running. */
+  seenOn: string;
+  /**
+   * True only when `sponsorable verify` decoded the watermark and checked the
+   * timestamp. A sighting without it is still a claim the contract supports;
+   * it is just not evidence a sponsor cannot argue with.
+   */
+  verified: boolean;
+}

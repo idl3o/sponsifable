@@ -129,6 +129,18 @@ export const USAGE_UPLIFT: Record<UsageRights, number> = {
 };
 
 /**
+ * Days of paid running each usage tier permits, counted from the first paid
+ * run. Organic-only permits none; a buyout permits any. Used to price an
+ * overrun as the tier the sponsor actually consumed.
+ */
+export const PAID_USAGE_DAYS: Record<UsageRights, number> = {
+  'organic-only': 0,
+  'whitelisting-30': 30,
+  'whitelisting-90': 90,
+  'full-buyout': Number.POSITIVE_INFINITY,
+};
+
+/**
  * Median views as a share of followers, below which an audience looks
  * inattentive or inflated. Used as a media-kit warning, never as a price cut —
  * a low ratio is a conversation to have, not a number to quietly apply.

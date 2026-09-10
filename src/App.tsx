@@ -1,10 +1,12 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { DealsView } from './components/DealsView';
 import { MediaKitView } from './components/MediaKitView';
 import { OutreachView } from './components/OutreachView';
 import { ProfileView } from './components/ProfileView';
 import { ProspectsView } from './components/ProspectsView';
 import { RateCardView } from './components/RateCardView';
-import { Button } from './components/ui/Primitives';
+import { Button, Pill } from './components/ui/Primitives';
+import { WORKSPACE_VERSION, parseWorkspace } from './domain/workspace';
 import type { Tab } from './store/useStore';
 import { useStore } from './store/useStore';
 
@@ -14,6 +16,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'media-kit', label: 'Media kit' },
   { id: 'prospects', label: 'Prospects' },
   { id: 'outreach', label: 'Outreach' },
+  { id: 'deals', label: 'Deals' },
 ];
 
 /** Today as an ISO date, read once so the domain layer stays pure. */
@@ -27,10 +30,13 @@ function DataControls() {
   const profile = useStore((s) => s.profile);
   const terms = useStore((s) => s.terms);
   const prospects = useStore((s) => s.prospects);
+  const deals = useStore((s) => s.deals);
   const importAll = useStore((s) => s.importAll);
+  const [problem, setProblem] = useState<string | null>(null);
 
   const download = () => {
-    const blob = new Blob([JSON.stringify({ profile, terms, prospects }, null, 2)], {
+    const workspace = { version: WORKSPACE_VERSION, profile, terms, prospects, deals };
+    const blob = new Blob([JSON.stringify(workspace, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
@@ -41,19 +47,30 @@ function DataControls() {
     URL.revokeObjectURL(url);
   };
 
+  // A file that fails validation leaves the current workspace untouched and
+  // says why, rather than loading half of it.
   const upload = (file: File) => {
     void file.text().then((text) => {
+      let data: unknown;
       try {
-        const data = JSON.parse(text) as Parameters<typeof importAll>[0];
-        if (data.profile && data.prospects) importAll(data);
+        data = JSON.parse(text);
       } catch {
-        // A malformed file leaves the current workspace untouched.
+        setProblem('That file is not valid JSON.');
+        return;
+      }
+      const parsed = parseWorkspace(data);
+      if (parsed.ok) {
+        importAll(parsed.workspace);
+        setProblem(null);
+      } else {
+        setProblem(`Not imported: ${parsed.error}.`);
       }
     });
   };
 
   return (
     <div className="row no-print" style={{ gap: 6 }}>
+      {problem && <Pill tone="bad">{problem}</Pill>}
       <Button onClick={download} title="Save everything to a file">
         Export
       </Button>
@@ -109,6 +126,7 @@ export function App() {
         {tab === 'media-kit' && <MediaKitView />}
         {tab === 'prospects' && <ProspectsView today={today} />}
         {tab === 'outreach' && <OutreachView today={today} />}
+        {tab === 'deals' && <DealsView today={today} />}
       </main>
     </div>
   );

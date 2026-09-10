@@ -6,19 +6,23 @@ import { DEFAULT_TERMS } from '../domain/pricing';
 import type {
   Channel,
   CreatorProfile,
+  Deal,
   DealTerms,
   Platform,
   Prospect,
   ProofPoint,
+  Sighting,
 } from '../domain/types';
+import { WORKSPACE_VERSION, parseWorkspace, type Workspace } from '../domain/workspace';
 import { SAMPLE_PROFILE, SAMPLE_PROSPECTS } from './sample';
 
-export type Tab = 'profile' | 'rate-card' | 'media-kit' | 'prospects' | 'outreach';
+export type Tab = 'profile' | 'rate-card' | 'media-kit' | 'prospects' | 'outreach' | 'deals';
 
 interface State {
   profile: CreatorProfile;
   terms: DealTerms;
   prospects: Prospect[];
+  deals: Deal[];
   tab: Tab;
   /** Prospect currently open in the outreach composer. */
   activeProspectId: string | null;
@@ -41,8 +45,17 @@ interface Actions {
   updateProspect: (id: string, patch: Partial<Prospect>) => void;
   removeProspect: (id: string) => void;
   openOutreach: (id: string) => void;
-  /** Replace all stored data, e.g. from an imported file. */
-  importAll: (data: Pick<State, 'profile' | 'terms' | 'prospects'>) => void;
+  /**
+   * File a closed deal and move its prospect to the matching stage.
+   * @param build receives a fresh id and returns the record, or null to abort.
+   */
+  recordDeal: (build: (id: string) => Deal | null) => void;
+  updateDeal: (id: string, patch: Partial<Omit<Deal, 'id'>>) => void;
+  removeDeal: (id: string) => void;
+  addSighting: (dealId: string, sighting: Omit<Sighting, 'id'>) => void;
+  removeSighting: (dealId: string, sightingId: string) => void;
+  /** Replace all stored data with a workspace that has already been validated. */
+  importAll: (workspace: Workspace) => void;
   resetToSample: () => void;
 }
 
@@ -50,10 +63,34 @@ const initialState: State = {
   profile: SAMPLE_PROFILE,
   terms: DEFAULT_TERMS,
   prospects: SAMPLE_PROSPECTS,
+  deals: [],
   tab: 'rate-card',
   activeProspectId: null,
   seq: 100,
 };
+
+type Persisted = Pick<State, 'profile' | 'terms' | 'prospects' | 'deals' | 'seq'>;
+
+/**
+ * Upgrade a save written by an older version. A save that fails validation is
+ * copied aside rather than discarded, so a bug here can never cost a creator
+ * their prospect list, and the app starts from the sample.
+ */
+function migrate(persisted: unknown, version: number): Persisted {
+  const parsed = parseWorkspace({ ...(persisted as object), version: Math.max(1, version) });
+  const seq = (persisted as { seq?: unknown } | null)?.seq;
+  if (parsed.ok) {
+    const { profile, terms, prospects, deals } = parsed.workspace;
+    return { profile, terms, prospects, deals, seq: typeof seq === 'number' ? seq : 100 };
+  }
+  try {
+    localStorage.setItem(`sponsorable-unreadable-v${version}`, JSON.stringify(persisted));
+  } catch {
+    // Storage full or blocked. Nothing more can be done from here.
+  }
+  const { profile, terms, prospects, deals } = initialState;
+  return { profile, terms, prospects, deals, seq: initialState.seq };
+}
 
 /**
  * Application state, persisted to this browser only.
@@ -174,23 +211,80 @@ export const useStore = create<State & Actions>()(
 
       openOutreach: (id) => set({ activeProspectId: id, tab: 'outreach' }),
 
-      importAll: (data) =>
-        set({ profile: data.profile, terms: data.terms, prospects: data.prospects }),
+      recordDeal: (build) =>
+        set(
+          produce<State>((s) => {
+            s.seq += 1;
+            const deal = build(`dl-${s.seq}`);
+            if (!deal) return;
+            s.deals.unshift(deal);
+            const prospect = s.prospects.find((p) => p.id === deal.prospectId);
+            if (prospect) prospect.stage = deal.outcome;
+          }),
+        ),
+
+      updateDeal: (id, patch) =>
+        set(
+          produce<State>((s) => {
+            const deal = s.deals.find((d) => d.id === id);
+            if (deal) Object.assign(deal, patch);
+          }),
+        ),
+
+      removeDeal: (id) =>
+        set(
+          produce<State>((s) => {
+            s.deals = s.deals.filter((d) => d.id !== id);
+          }),
+        ),
+
+      addSighting: (dealId, sighting) =>
+        set(
+          produce<State>((s) => {
+            const deal = s.deals.find((d) => d.id === dealId);
+            if (!deal) return;
+            s.seq += 1;
+            deal.sightings.push({ ...sighting, id: `st-${s.seq}` });
+          }),
+        ),
+
+      removeSighting: (dealId, sightingId) =>
+        set(
+          produce<State>((s) => {
+            const deal = s.deals.find((d) => d.id === dealId);
+            if (deal) deal.sightings = deal.sightings.filter((x) => x.id !== sightingId);
+          }),
+        ),
+
+      importAll: (workspace) =>
+        set({
+          profile: workspace.profile,
+          terms: workspace.terms,
+          prospects: workspace.prospects,
+          deals: workspace.deals,
+          activeProspectId: null,
+        }),
 
       resetToSample: () =>
         set({
           profile: SAMPLE_PROFILE,
           terms: DEFAULT_TERMS,
           prospects: SAMPLE_PROSPECTS,
+          deals: [],
           activeProspectId: null,
         }),
     }),
     {
+      // The key keeps its first name so existing saves are found; the format
+      // is tracked by `version`, and `migrate` upgrades anything older.
       name: 'sponsorable-v1',
-      partialize: (s) => ({
+      version: WORKSPACE_VERSION,
+      migrate: (persisted, version) => migrate(persisted, version) as State & Actions,
+      partialize: (s): Persisted => ({
         profile: s.profile,
         terms: s.terms,
         prospects: s.prospects,
+        deals: s.deals,
         seq: s.seq,
       }),
     },

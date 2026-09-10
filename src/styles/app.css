@@ -270,7 +270,8 @@ input[type='range'] {
 
 /* ---------- buttons ---------- */
 
-button.btn {
+button.btn,
+a.btn {
   appearance: none;
   border: 1px solid var(--line);
   background: var(--panel-2);
@@ -282,7 +283,14 @@ button.btn {
   cursor: pointer;
 }
 
-button.btn:hover {
+/* A link that leaves the app, styled as the action it is. */
+a.btn {
+  display: inline-block;
+  text-decoration: none;
+}
+
+button.btn:hover,
+a.btn:hover {
   border-color: #3a4250;
   background: #20252e;
 }

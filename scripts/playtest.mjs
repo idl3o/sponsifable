@@ -14,7 +14,7 @@ import { join } from 'node:path';
 
 const BASE = process.argv[2] ?? 'http://localhost:5180';
 const SHOTS = process.env.PLAYTEST_OUT ?? join(process.cwd(), 'playtest-shots');
-const TABS = ['Profile', 'Rate card', 'Media kit', 'Prospects', 'Outreach'];
+const TABS = ['Profile', 'Rate card', 'Media kit', 'Prospects', 'Outreach', 'Deals'];
 
 const problems = [];
 const note = (severity, where, message) => problems.push({ severity, where, message });
@@ -162,6 +162,36 @@ const run = async () => {
   if (email.length < 200) note('error', 'desktop/outreach', 'draft suspiciously short');
   if (/\bundefined\b|\bNaN\b/.test(email)) note('error', 'desktop/outreach', 'draft contains a broken merge field');
   await page.screenshot({ path: join(SHOTS, 'outreach-draft.png'), fullPage: true });
+
+  // --- deal log: record a win, then a sighting that overran its licence ---
+  await page.getByRole('tab', { name: 'Rate card' }).click();
+  await page.getByLabel('Usage rights').selectOption('whitelisting-30');
+  await page.getByRole('tab', { name: 'Deals' }).click();
+  await page.getByLabel('Agreed, GBP').fill('800');
+  await page.getByRole('button', { name: 'Record' }).click();
+  await page.waitForTimeout(200);
+  await page.getByRole('button', { name: 'Delivery, rights and sightings' }).first().click();
+  const rights = await page.locator('main').innerText();
+  if (!/sponsorable seal dl-\d+/.test(rights)) {
+    note('error', 'desktop/deals', 'unsealed won deal does not say how to seal it');
+  }
+  await page.getByLabel('Started running').fill('2026-10-01');
+  await page.getByLabel('Last seen running').fill('2026-12-15');
+  await page.getByRole('button', { name: 'Record sighting' }).click();
+  await page.waitForTimeout(200);
+  const overrun = await page.locator('main').innerText();
+  if (!/75 days in all/.test(overrun) || !/difference is £[\d,]+/.test(overrun)) {
+    note('error', 'desktop/deals', 'overrun paragraph missing or unpriced');
+  }
+  if (!/not verified/.test(overrun)) note('error', 'desktop/deals', 'manual sighting not marked unverified');
+  const href = (await page.getByRole('link', { name: 'Submit this rate anonymously' }).getAttribute('href')) ?? '';
+  if (!href.includes('template=rate-data.yml') || /Hetzner|Linear/.test(decodeURIComponent(href))) {
+    note('error', 'desktop/deals', `rate submission link is wrong or names the brand: ${href.slice(0, 120)}`);
+  }
+  await checkNumbers(page, 'desktop/deals');
+  await page.screenshot({ path: join(SHOTS, 'deals-overrun.png'), fullPage: true });
+  await page.getByRole('tab', { name: 'Rate card' }).click();
+  await page.getByLabel('Usage rights').selectOption('organic-only');
 
   // --- empty state: delete every channel ---
   await page.getByRole('tab', { name: 'Profile' }).click();

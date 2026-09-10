@@ -9,7 +9,7 @@ import { useStore } from './store/useStore';
  * derived values reach the screen.
  */
 
-const TABS = ['Profile', 'Rate card', 'Media kit', 'Prospects', 'Outreach'];
+const TABS = ['Profile', 'Rate card', 'Media kit', 'Prospects', 'Outreach', 'Deals'];
 
 beforeEach(() => {
   useStore.getState().resetToSample();
@@ -21,6 +21,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -86,6 +87,53 @@ describe('App', () => {
     const last = removes[removes.length - 1];
     if (last) fireEvent.click(last);
     expect(useStore.getState().profile.channels).toHaveLength(before);
+  });
+
+  it('records a won deal and closes its prospect', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Deals' }));
+    fireEvent.change(screen.getByLabelText(/Agreed, GBP/i), { target: { value: '2400' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record' }));
+
+    const [deal] = useStore.getState().deals;
+    expect(deal?.agreed).toBe(2400);
+    const prospect = useStore.getState().prospects.find((p) => p.id === deal?.prospectId);
+    expect(prospect?.stage).toBe('won');
+    expect(screen.getByText(/agreed a median of/i)).toBeTruthy();
+  });
+
+  it('refuses an invalid import, says why, and keeps the workspace', async () => {
+    render(<App />);
+    const before = useStore.getState().profile;
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File([JSON.stringify({ profile: { niche: 'astrology' }, prospects: [] })], 'bad.json');
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(await screen.findByText(/Not imported: profile.niche/)).toBeTruthy();
+    expect(useStore.getState().profile).toBe(before);
+  });
+
+  it('upgrades a first-release save without losing it', async () => {
+    const { profile, terms, prospects } = useStore.getState();
+    const old = { ...profile, name: 'Saved Before Deals Existed' };
+    localStorage.setItem(
+      'sponsorable-v1',
+      JSON.stringify({ state: { profile: old, terms, prospects, seq: 140 }, version: 0 }),
+    );
+    await useStore.persist.rehydrate();
+
+    expect(useStore.getState().profile.name).toBe('Saved Before Deals Existed');
+    expect(useStore.getState().deals).toEqual([]);
+    expect(useStore.getState().seq).toBe(140);
+  });
+
+  it('sets an unreadable save aside instead of discarding it', async () => {
+    const corrupt = { state: { profile: { niche: 'astrology' }, prospects: [] }, version: 0 };
+    localStorage.setItem('sponsorable-v1', JSON.stringify(corrupt));
+    await useStore.persist.rehydrate();
+
+    expect(localStorage.getItem('sponsorable-unreadable-v0')).toContain('astrology');
+    expect(useStore.getState().profile.niche).not.toBe('astrology');
   });
 
   it('generates ids without randomness, so two adds are predictable', () => {
