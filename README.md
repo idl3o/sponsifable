@@ -1,63 +1,117 @@
 # Sponsorable
 
-Price it, prove it, pitch it. A local-first tool for creators who want sponsorship money and have no idea what to charge.
+**Work out what to charge a sponsor, prove the audience, send the pitch, track the pipeline. Entirely on your own machine.**
 
-It is not a marketplace. Nobody is on the other side of it. It is the thing a creator uses alone, before and during a negotiation, to stop leaving money on the table.
+Most creators price sponsorship by guessing, or by repeating a number someone said on a podcast. Then a brand asks why, and the number falls apart. Sponsorable derives a price you can defend line by line, and hands you the sentence to say when you are asked to justify it.
+
+MIT licensed. No account, no server, no telemetry. `npm install && npm run dev`.
+
+---
 
 ## What it does
 
-**Derives a defensible price.** A rate card built from median views, engagement against the platform norm, audience geography, category demand, and the commercial terms actually on offer. Every price expands into the full derivation, with a sentence attached to each factor that the creator can say out loud when a sponsor asks why. A number you cannot explain is a number you will be talked out of.
+**Derives a defensible price.** A rate card built from median views, engagement measured against the platform norm, audience geography, category demand, and the commercial terms actually on the table. Open any line and the full derivation expands, each factor carrying a sentence you can say out loud. A number you cannot explain is a number you will be talked out of.
 
-**Refuses to price your labour like an impression.** A dedicated video takes a day and a half whoever makes it, and cost-per-impression pricing alone tells a creator with a small audience to do that for thirty pounds. Every format carries a production floor derived from the hours it actually costs, and the price is the greater of the two. When the floor binds, the interface says so and shows both numbers, so the creator learns why rather than just seeing a figure.
+**Refuses to price your labour like an impression.** A dedicated video takes a day and a half whoever makes it. Cost-per-impression pricing alone tells a creator with a small audience to do that for thirty pounds. Every format carries a production floor derived from the hours it costs, and the price is the greater of the two. When the floor binds, the interface says so and shows both numbers.
 
-**Prices the terms, not just the placement.** Most creators quote one figure for a video and hand over usage rights and category exclusivity for nothing. Those are separate things a sponsor is buying. A full buyout is priced at nearly twice organic-only, because it is a media licence rather than a post.
+**Prices the terms, not just the placement.** Most creators quote one figure for a video and hand over usage rights and category exclusivity for nothing. Those are separate things a sponsor is buying. A full buyout costs nearly twice organic-only here, because it is a media licence rather than a post.
 
-**Builds a media kit that survives scrutiny.** Leading with impressions per placement rather than summed follower counts, because summing followers across five platforms counts the same person five times and every experienced sponsor knows it. The kit also lists the problems a sponsor will spot, so the creator names them first.
+**Builds a media kit that survives scrutiny.** It leads with impressions per placement rather than summed follower counts, because summing followers across five platforms counts the same person five times and every experienced sponsor knows it. It also lists the problems a sponsor will notice, so you name them first.
 
-**Ranks prospects.** A 0 to 100 fit score over category adjacency, market overlap, budget alignment against the walk-away price, and whether the brand has ever paid a creator at all. Each component reports its reasoning so a low score can be argued with. The point is triage, not prophecy.
+**Ranks prospects.** A 0 to 100 fit score over category adjacency, market overlap, budget against your walk-away price, and whether the brand has ever paid a creator at all. Every component reports its reasoning, so a low score can be argued with. Triage, not prophecy.
 
-**Writes the pitch and the follow-ups.** Deterministic composition from the creator's own numbers: name the product, show delivered attention, state a price, ask one question, under 150 words. A follow-up cadence at days 4, 11 and 25, with a next-action flag per prospect.
+**Writes the pitch and the follow-ups.** Composed from your own numbers: name the product, show delivered attention, state a price, ask one question, under 150 words. Follow-ups at days 4, 11 and 25, with a next-action flag on every prospect.
 
-## Local-first
+---
 
-Nothing leaves the browser. No account, no server, no analytics. A creator's unreleased rates and prospect list are commercially sensitive, and the simplest way to keep them private is never to transmit them. Export and import are a JSON file.
+## The interesting problem is not the code
 
-If Ollama is running on the machine, the outreach tab offers to tighten the draft's wording with a local model, instructed to preserve every number and invent nothing. The deterministic draft is complete without it.
+The application is a few thousand lines of TypeScript. Anyone could write it.
+
+The hard part sits in one file: [`src/domain/benchmarks.ts`](src/domain/benchmarks.ts). It holds every market assumption the tool makes — cost-per-thousand bands for each platform and format, category multipliers, geography weights, platform-median engagement rates, production floors, and the uplifts for exclusivity and usage rights.
+
+Those numbers are seeded from publicly circulated creator rates for 2025 and 2026. They are not audited market data, and the app says so on the rate card rather than presenting a guess as a quote.
+
+**This is where contributions matter most.** If you have been paid for a placement, you know something the table does not. A single real data point — platform, format, audience size, category, what you were actually paid, and what rights the sponsor got — is worth more to this project than a refactor. Rates also drift, so a table that is right today is wrong in eighteen months without people correcting it.
+
+The guard against bad edits is [`src/domain/calibration.test.ts`](src/domain/calibration.test.ts), which runs nine realistic creator archetypes end to end and asserts each headline price lands somewhere a working creator would recognise. Change a band, run the sweep, and see what moved:
+
+```
+npx vitest run calibration --reporter=verbose
+
+Nano tech YouTuber            YouTube Dedicated video      900 views     £450     on time  ok
+Micro tech YouTuber           YouTube 60–90s integration 8,000 views     £200     on time  ok
+Mid-size finance YouTuber     YouTube Dedicated video   60,000 views   £2,650  £44.17 CPM  ok
+Large entertainment YouTuber  YouTube 60–90s integration  400,000 views £4,200  £10.50 CPM  ok
+...
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to submit a rate, and what the project will and will not accept.
+
+---
+
+## Two design decisions worth arguing with
+
+**It is not a marketplace.** There is nobody on the other side. Two-sided creator-and-brand marketplaces die on cold-start liquidity and need a sales team to survive, which makes them the wrong shape for software you can run locally. This is the tool you use alone, before and during a negotiation. If that is the wrong call, the argument is worth having in an issue.
+
+**The domain layer is pure by construction.** No clock, no randomness, no I/O anywhere in `src/domain`. The same profile always produces the same rate card, which is a property the tests assert directly. This is not fastidiousness. A pricing tool that returns a different number on Tuesday is a pricing tool nobody can defend in a negotiation.
+
+---
+
+## What this project declines to do
+
+**Scrape platform APIs for your stats.** You type in your median views. Automating it means OAuth, a backend, stored tokens and a privacy surface, in exchange for saving four numbers of typing.
+
+**Find prospects for you.** The scoring ranks a list you assemble by hand and will not build that list. Doing it properly needs a maintained database of who sponsors whom, which is the genuinely expensive part of this problem and cannot live in a static page. Until that exists, the prospects tab is an organised research habit with a scoring function attached. This is the project's honest limitation, and it is written into the code comments as well as here.
+
+**Send email on your behalf.** It composes the draft and copies it to your clipboard. Deliverability, warm-up and reputation are a business, not a feature.
+
+**Call a paid language model.** The pitch composer is deterministic and complete without any model. If Ollama is running locally, the outreach tab offers to tighten the wording, with instructions to preserve every number and invent nothing. That is optional and stays on your machine.
+
+**Track you.** No analytics, no error reporting, no account. Your unreleased rates and prospect list are commercially sensitive, and the simplest way to keep them private is never to transmit them. Export and import are a JSON file you control.
+
+---
 
 ## Running it
 
-```
+```bash
 npm install
 npm run dev        # http://localhost:5180
-npm test           # 67 tests, including a nine-archetype calibration sweep
+npm test           # 67 tests, including the calibration sweep
 npm run typecheck
 npm run build
-node scripts/playtest.mjs   # drives a real browser, screenshots every tab
+
+node scripts/playtest.mjs   # drives real Chrome, screenshots every tab,
+                            # checks overflow, tap targets and broken numbers
 ```
 
-## Where the numbers come from
+Requires Node 20 or newer. The play test uses the Chrome already installed on your machine rather than downloading a browser.
 
-`src/domain/benchmarks.ts` holds every market assumption in one file: CPM bands per platform and format, category multipliers, geography weights, platform-median engagement rates, and the uplifts for exclusivity and usage rights. They are seeded from publicly circulated creator rates for 2025 and 2026, in GBP.
-
-They are not audited market data, and the app never pretends otherwise. The value is that the derivation is explicit rather than a guess dressed as a quote: change a band in that file and every price downstream moves for a stated reason. When a sponsor says the number is wrong, ask what they paid last time and edit the band, rather than discounting the whole card.
-
-## The honest limitation
-
-Pricing, media kit and pitch composition all work from data the creator already has. Prospect discovery does not. The app will rank a list of brands well and will not find them for you, because doing that properly needs a maintained database of who sponsors whom, which is the expensive part of this problem and cannot be shipped as a static page. Until that exists, the prospects tab is a well-organised manual research habit with a scoring function attached.
+---
 
 ## Shape
 
 ```
-src/domain/      pure functions, no clock, no randomness, no I/O
-  types.ts       the vocabulary
-  benchmarks.ts  every market assumption, in one editable place
-  pricing.ts     rate derivation with per-factor rationale
-  mediakit.ts    derived audience facts and credibility warnings
-  scoring.ts     prospect fit
-  pitch.ts       email composition and follow-up cadence
-  localModel.ts  optional Ollama sharpening, fails quietly
+src/domain/      pure functions: no clock, no randomness, no I/O
+  types.ts         the vocabulary
+  benchmarks.ts    every market assumption, in one editable place
+  pricing.ts       rate derivation, with a rationale per factor
+  mediakit.ts      derived audience facts and credibility warnings
+  scoring.ts       prospect fit
+  pitch.ts         email composition and follow-up cadence
+  localModel.ts    optional Ollama sharpening, fails quietly
+  *.test.ts        property tests plus the calibration sweep
 src/store/       zustand and immer, persisted to localStorage
 src/components/  one view per tab
+scripts/         browser play test
 ```
 
-The domain layer is deterministic by construction: same profile in, same rate card out, every time. That is a testable property and the tests assert it.
+React 18, TypeScript in strict mode, Vite, vitest, zustand. No CSS framework and no component library, so there is nothing to learn before changing something.
+
+---
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
+
+If this helps you land a sponsorship, the project would like to know what you were paid and what the table got wrong. That is the whole contribution loop.

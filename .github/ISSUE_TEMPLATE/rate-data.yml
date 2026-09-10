@@ -1,0 +1,147 @@
+name: Rate data point
+description: Tell the project what you were actually paid, so the pricing tables get less wrong.
+title: 'rate: <platform> <format>, <audience size>'
+labels: ['rate-data']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every price this tool produces rests on tables of assumptions in `src/domain/benchmarks.ts`.
+        A real deal beats a guess. This is the single most useful thing you can contribute.
+
+        **Before you post.** Do not share anything a contract binds you not to share. You do not
+        need to name your channel, and rounding hard is fine. Figures are aggregated into bands.
+        No individual deal and no channel is published in the repository.
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - YouTube
+        - YouTube Shorts
+        - TikTok
+        - Instagram
+        - Twitch
+        - X
+        - Newsletter
+        - Podcast
+        - Other (say which below)
+    validations:
+      required: true
+
+  - type: input
+    id: format
+    attributes:
+      label: Format
+      description: Dedicated video, 60-90s integration, reel, story frame, host-read spot, primary newsletter slot, and so on.
+      placeholder: 60-90s integration
+    validations:
+      required: true
+
+  - type: input
+    id: views
+    attributes:
+      label: Median views on the placement
+      description: >
+        The median, not the mean, and not your best-performing post. For a newsletter use opens,
+        for a podcast use downloads. This is the number sponsors should be paying against.
+      placeholder: '8,000'
+    validations:
+      required: true
+
+  - type: input
+    id: followers
+    attributes:
+      label: Follower or subscriber count
+      description: Optional, and used only as context. It does not set the price.
+      placeholder: '25,000'
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Content category
+      options:
+        - Finance and investing
+        - B2B software
+        - Technology
+        - Health and fitness
+        - Education
+        - Beauty
+        - Food and drink
+        - Travel
+        - Gaming
+        - Entertainment
+        - Lifestyle
+        - Other (say which below)
+    validations:
+      required: true
+
+  - type: input
+    id: geography
+    attributes:
+      label: Roughly where the audience sits
+      description: Approximate shares are fine.
+      placeholder: about 60% UK and US, 25% Western Europe, 15% elsewhere
+    validations:
+      required: true
+
+  - type: input
+    id: paid
+    attributes:
+      label: What you were actually paid
+      description: >
+        Any currency. A range is fine. This must be money that changed hands, not an asking price
+        from your media kit. Asking prices and paid prices are different quantities, and conflating
+        them is how creator rate discourse became unreliable.
+      placeholder: £900, or somewhere between £800 and £1,200
+    validations:
+      required: true
+
+  - type: dropdown
+    id: rights
+    attributes:
+      label: What the sponsor got
+      options:
+        - Organic only, my channel
+        - Paid whitelisting, roughly 30 days
+        - Paid whitelisting, roughly 90 days
+        - Full buyout, anywhere, indefinitely
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: exclusivity
+    attributes:
+      label: Category exclusivity
+      description: How long you agreed not to take a competitor, if at all.
+      placeholder: 30 days, or none
+
+  - type: input
+    id: when
+    attributes:
+      label: Roughly when
+      placeholder: mid 2026
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Whose deal is this
+      options:
+        - Mine, money received
+        - Mine, agreed but not yet paid
+        - Someone else's, shared with their permission
+        - Publicly disclosed by the creator or brand
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: >
+        Whether you negotiated up from their first offer, whether the brand had a fixed rate card,
+        whether the price included extra deliverables. Context like this is often the useful part.
