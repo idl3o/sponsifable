@@ -1,0 +1,228 @@
+/**
+ * Browser play test.
+ *
+ * Walks the app the way a creator would on their first visit, captures every
+ * console error and unhandled rejection, screenshots each tab at desktop and
+ * phone widths, and checks for the layout faults that unit tests cannot see:
+ * horizontal overflow, invisible text, controls too small to tap.
+ *
+ * Usage: node scripts/playtest.mjs [baseUrl]
+ */
+import { chromium } from 'playwright';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+
+const BASE = process.argv[2] ?? 'http://localhost:5180';
+const SHOTS = process.env.PLAYTEST_OUT ?? join(process.cwd(), 'playtest-shots');
+const TABS = ['Profile', 'Rate card', 'Media kit', 'Prospects', 'Outreach'];
+
+const problems = [];
+const note = (severity, where, message) => problems.push({ severity, where, message });
+
+/** Attach console and error listeners that record rather than print. */
+function watch(page, label) {
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') note('error', label, `console: ${msg.text().slice(0, 200)}`);
+    if (msg.type() === 'warning' && /React|key|validate/i.test(msg.text())) {
+      note('warning', label, `console: ${msg.text().slice(0, 200)}`);
+    }
+  });
+  page.on('pageerror', (err) => note('error', label, `uncaught: ${err.message.slice(0, 200)}`));
+  page.on('requestfailed', (req) => {
+    // The Ollama probe is expected to fail when Ollama is not running.
+    if (req.url().includes('11434')) return;
+    note('warning', label, `request failed: ${req.url().slice(0, 120)}`);
+  });
+}
+
+/** Fail the page if anything makes the body scroll sideways. */
+async function checkOverflow(page, where) {
+  const overflow = await page.evaluate(() => {
+    const d = document.documentElement;
+    if (d.scrollWidth <= d.clientWidth + 1) return null;
+    const offenders = [...document.querySelectorAll('*')]
+      .filter((el) => el.getBoundingClientRect().right > d.clientWidth + 1)
+      .slice(0, 4)
+      .map((el) => `${el.tagName.toLowerCase()}.${(el.className || '').toString().slice(0, 40)}`);
+    return { scrollWidth: d.scrollWidth, clientWidth: d.clientWidth, offenders };
+  });
+  if (overflow) {
+    note(
+      'error',
+      where,
+      `horizontal overflow ${overflow.scrollWidth}px in ${overflow.clientWidth}px: ${overflow.offenders.join(', ')}`,
+    );
+  }
+}
+
+/** Check that no interactive control is too small to hit on a phone. */
+async function checkTapTargets(page, where) {
+  const small = await page.evaluate(() => {
+    return [...document.querySelectorAll('button, select, input, a')]
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && r.height < 28;
+      })
+      .slice(0, 5)
+      .map((el) => `${el.tagName.toLowerCase()} "${(el.textContent || '').trim().slice(0, 24)}"`);
+  });
+  if (small.length > 0) note('warning', where, `tap targets under 28px: ${small.join(', ')}`);
+}
+
+/** Check every rendered price looks like money rather than NaN or Infinity. */
+async function checkNumbers(page, where) {
+  const bad = await page.evaluate(() => {
+    const text = document.body.innerText;
+    const hits = [];
+    if (/NaN/.test(text)) hits.push('NaN on screen');
+    if (/Infinity/.test(text)) hits.push('Infinity on screen');
+    if (/£-/.test(text)) hits.push('negative price');
+    if (/undefined/.test(text)) hits.push('undefined on screen');
+    return hits;
+  });
+  for (const hit of bad) note('error', where, hit);
+}
+
+async function sweep(page, label, shotPrefix) {
+  for (const tab of TABS) {
+    await page.getByRole('tab', { name: tab }).click();
+    await page.waitForTimeout(180);
+    const where = `${label}/${tab}`;
+    await checkOverflow(page, where);
+    await checkNumbers(page, where);
+    if (label === 'phone') await checkTapTargets(page, where);
+    await page.screenshot({
+      path: join(SHOTS, `${shotPrefix}-${tab.toLowerCase().replace(/ /g, '-')}.png`),
+      fullPage: true,
+    });
+  }
+}
+
+/** Type a nano creator's real numbers into the profile. */
+async function becomeNanoCreator(page) {
+  await page.getByRole('tab', { name: 'Profile' }).click();
+  await page.getByLabel('Median views per post').first().fill('900');
+  await page.getByLabel('Followers or subscribers').first().fill('4000');
+  await page.getByLabel('Name').fill('Nano Creator');
+  await page.waitForTimeout(200);
+}
+
+const run = async () => {
+  mkdirSync(SHOTS, { recursive: true });
+  // Use the Chrome already on this machine rather than downloading a build.
+  const browser = await chromium.launch({ channel: 'chrome' });
+
+  // --- desktop, sample data ---
+  const desktop = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await desktop.newPage();
+  watch(page, 'desktop');
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  await sweep(page, 'desktop', 'desktop');
+
+  // --- the case that was broken: a very small creator ---
+  await becomeNanoCreator(page);
+  await page.getByRole('tab', { name: 'Rate card' }).click();
+  await page.waitForTimeout(250);
+
+  const nanoPrice = await page.locator('.price').first().innerText();
+  const flooredPill = await page.getByText('priced on your time').first().isVisible().catch(() => false);
+  if (!flooredPill) {
+    note('error', 'desktop/nano', 'production floor not surfaced for a 900-view creator');
+  }
+  const nanoValue = Number(nanoPrice.replace(/[£,]/g, ''));
+  if (!Number.isFinite(nanoValue) || nanoValue < 100) {
+    note('error', 'desktop/nano', `nano creator quoted ${nanoPrice}, which is below the cost of the work`);
+  }
+  await page.screenshot({ path: join(SHOTS, 'nano-rate-card.png'), fullPage: true });
+
+  // Expand a derivation and confirm the reasoning renders.
+  await page.locator('.rate-head').first().click();
+  await page.waitForTimeout(150);
+  const derivation = await page.locator('.rate-body').first().innerText();
+  for (const required of ['Audience value', 'Cost of making it', 'Asking price']) {
+    if (!derivation.includes(required)) {
+      note('error', 'desktop/derivation', `derivation missing "${required}"`);
+    }
+  }
+  await page.screenshot({ path: join(SHOTS, 'nano-derivation.png'), fullPage: true });
+
+  // --- terms actually move the price ---
+  const before = await page.locator('.price').first().innerText();
+  await page.getByLabel('Usage rights').selectOption('full-buyout');
+  await page.waitForTimeout(200);
+  const after = await page.locator('.price').first().innerText();
+  if (before === after) note('error', 'desktop/terms', 'full buyout did not change the price');
+  await page.getByLabel('Usage rights').selectOption('organic-only');
+
+  // --- outreach draft ---
+  await page.getByRole('tab', { name: 'Outreach' }).click();
+  await page.waitForTimeout(300);
+  const email = await page.locator('.email').first().innerText();
+  if (!email.includes('£')) note('error', 'desktop/outreach', 'draft contains no price');
+  if (email.length < 200) note('error', 'desktop/outreach', 'draft suspiciously short');
+  if (/\bundefined\b|\bNaN\b/.test(email)) note('error', 'desktop/outreach', 'draft contains a broken merge field');
+  await page.screenshot({ path: join(SHOTS, 'outreach-draft.png'), fullPage: true });
+
+  // --- empty state: delete every channel ---
+  await page.getByRole('tab', { name: 'Profile' }).click();
+  await page.waitForTimeout(150);
+  // Channel cards carry a Remove button, and so do proof points. Target only
+  // the channel cards, re-querying each time because the list re-renders.
+  for (let i = 0; i < 12; i += 1) {
+    const remove = page
+      .locator('.card')
+      .filter({ has: page.getByLabel('Median views per post') })
+      .first()
+      .getByRole('button', { name: 'Remove' });
+    if ((await remove.count()) === 0) break;
+    await remove.click();
+    await page.waitForTimeout(120);
+  }
+  await page.waitForTimeout(200);
+  await page.getByRole('tab', { name: 'Rate card' }).click();
+  await page.waitForTimeout(200);
+  const emptyText = await page.locator('main').innerText();
+  if (!/No priced placements/i.test(emptyText)) {
+    note('error', 'desktop/empty', 'no empty state after removing every channel');
+  }
+  await checkNumbers(page, 'desktop/empty');
+  await page.screenshot({ path: join(SHOTS, 'empty-state.png'), fullPage: true });
+
+  // Outreach with nothing priced must not explode.
+  await page.getByRole('tab', { name: 'Outreach' }).click();
+  await page.waitForTimeout(250);
+  await checkNumbers(page, 'desktop/empty-outreach');
+  await page.screenshot({ path: join(SHOTS, 'empty-outreach.png'), fullPage: true });
+
+  await desktop.close();
+
+  // --- phone, fresh storage ---
+  const phone = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2,
+  });
+  const mobile = await phone.newPage();
+  watch(mobile, 'phone');
+  await mobile.goto(BASE, { waitUntil: 'networkidle' });
+  await sweep(mobile, 'phone', 'phone');
+  await phone.close();
+
+  await browser.close();
+
+  const errors = problems.filter((p) => p.severity === 'error');
+  const warnings = problems.filter((p) => p.severity === 'warning');
+
+  console.log(`\nScreenshots: ${SHOTS}`);
+  console.log(`Errors: ${errors.length}   Warnings: ${warnings.length}\n`);
+  for (const p of [...errors, ...warnings]) {
+    console.log(`  [${p.severity}] ${p.where}: ${p.message}`);
+  }
+  if (errors.length === 0 && warnings.length === 0) console.log('  nothing found');
+  console.log('');
+  process.exit(errors.length > 0 ? 1 : 0);
+};
+
+run().catch((err) => {
+  console.error('play test crashed:', err);
+  process.exit(2);
+});

@@ -87,10 +87,14 @@ function RateRow({ line }: { line: RateLine }) {
     <div className="rate">
       <button className="rate-head" onClick={() => setOpen(!open)} aria-expanded={open}>
         <div>
-          <div style={{ fontWeight: 560 }}>{FORMAT_LABEL[line.format]}</div>
+          <div className="row" style={{ gap: 7 }}>
+            <span style={{ fontWeight: 560 }}>{FORMAT_LABEL[line.format]}</span>
+            {line.flooredByProduction && <Pill tone="warn">priced on your time</Pill>}
+          </div>
           <div className="note">
             {PLATFORM_LABEL[line.platform]} {handle ? `· ${handle}` : ''} ·{' '}
-            {count(line.effectiveImpressions)} median views · {money(effectiveCpm(line))} CPM
+            {count(line.effectiveImpressions)} median views
+            {line.flooredByProduction ? '' : ` · ${money(effectiveCpm(line))} CPM`}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -123,13 +127,32 @@ function RateRow({ line }: { line: RateLine }) {
           ))}
 
           <div className="adj">
+            <div>Audience value</div>
+            <div className="f">{money(line.mediaValue)}</div>
+            <div className="why">
+              What the reach alone is worth once every factor above is applied.
+            </div>
+          </div>
+
+          <div className="adj">
+            <div>Cost of making it</div>
+            <div className="f">{money(line.productionFloor)}</div>
+            <div className="why">
+              {line.flooredByProduction
+                ? 'This is what sets your price. The work takes the same hours whoever is watching, so reach-based pricing would have you make this for less than it costs you. Below this number the correct answer to a sponsor is no.'
+                : 'The least this could sell for and still be worth making. Your audience clears it comfortably.'}
+            </div>
+          </div>
+
+          <div className="adj">
             <div style={{ fontWeight: 560 }}>Asking price</div>
             <div className="f" style={{ color: 'var(--accent)' }}>
               {money(line.target)}
             </div>
             <div className="why">
-              Rounded to a number you can say out loud. The walk-away sits 22% below and the opening
-              ask 35% above, which is the room a normal negotiation needs.
+              {line.flooredByProduction
+                ? 'Rounded to a number you can say out loud. There is no room beneath it, because the floor is the cost of the work rather than a negotiating position.'
+                : 'Rounded to a number you can say out loud. The walk-away sits 22% below and the opening ask 35% above, which is the room a normal negotiation needs.'}
             </div>
           </div>
         </div>
@@ -145,6 +168,9 @@ export function RateCardView() {
 
   const lines = useMemo(() => buildRateCard(profile, terms), [profile, terms]);
   const priced = lines.filter((l) => l.target > 0);
+  // Lines where the audience, not the labour, sets the price. Only these carry
+  // a cost per thousand that would survive a sponsor reading it.
+  const reachPriced = priced.filter((l) => !l.flooredByProduction);
   const total = rateCardTotal(priced);
   const best = priced.reduce<RateLine | undefined>(
     (acc, l) => (!acc || l.target > acc.target ? l : acc),
@@ -174,14 +200,22 @@ export function RateCardView() {
                 sub={best ? FORMAT_LABEL[best.format] : ''}
               />
               <Stat k="Everything at once" v={money(total)} sub={`${priced.length} placements`} />
-              <Stat
-                k="Blended CPM"
-                v={money(
-                  priced.reduce((s, l) => s + effectiveCpm(l) * l.effectiveImpressions, 0) /
-                    Math.max(1, priced.reduce((s, l) => s + l.effectiveImpressions, 0)),
-                )}
-                sub="what a sponsor pays per thousand"
-              />
+              {reachPriced.length > 0 ? (
+                <Stat
+                  k="Blended CPM"
+                  v={money(
+                    reachPriced.reduce((s, l) => s + effectiveCpm(l) * l.effectiveImpressions, 0) /
+                      Math.max(1, reachPriced.reduce((s, l) => s + l.effectiveImpressions, 0)),
+                  )}
+                  sub="what a sponsor pays per thousand"
+                />
+              ) : (
+                <Stat
+                  k="Priced on"
+                  v="Your time"
+                  sub="audience too small for a cost per thousand to mean anything"
+                />
+              )}
             </div>
 
             {priced.map((line) => (

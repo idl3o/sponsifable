@@ -72,6 +72,45 @@ export const MEDIAN_ENGAGEMENT: Record<Platform, number> = {
   podcast: 0.01,
 };
 
+/**
+ * The least an asset can sell for and still be worth making, in GBP, before
+ * any commercial terms are added.
+ *
+ * Cost-per-impression pricing has a failure mode that hurts exactly the people
+ * this tool exists for: it tells a creator with a small audience to charge
+ * thirty pounds for a video that takes a day to make. Reach scales with
+ * audience size. The labour does not. These floors are derived from the hours
+ * each format actually costs — concepting, scripting, shooting, editing, plus
+ * the contract, the disclosure compliance and the invoice — at a rate a
+ * skilled freelancer would charge for creative work.
+ *
+ * A creator whose media value sits below the floor is not being told their
+ * audience is worth more than it is. They are being told that below this
+ * number, the correct answer is no.
+ */
+export const PRODUCTION_FLOOR: Record<Format, number> = {
+  // A full video is a day and a half of work whoever is making it.
+  dedicated: 450,
+  // Script, shoot, edit and brief compliance on a 60-90 second segment.
+  integration: 200,
+  // Short-form still takes half a day once concepting is counted.
+  short: 150,
+  reel: 150,
+  // A static post is a couple of hours plus the commercial admin.
+  post: 90,
+  // A story frame is quick, but never free.
+  story: 45,
+  // A brief in-video mention, plus the admin every paid deal carries.
+  mention: 60,
+  // A live read needs prep, and commits the stream to a sponsor.
+  stream: 120,
+  // Writing a sponsored section well, in one of only a few slots a month.
+  'primary-slot': 200,
+  classified: 60,
+  // Prep, read and admin on a host-read spot.
+  'episode-read': 150,
+};
+
 /** Uplift for granting a sponsor category exclusivity for a window. */
 export const EXCLUSIVITY_UPLIFT: Record<number, number> = {
   0: 1.0,

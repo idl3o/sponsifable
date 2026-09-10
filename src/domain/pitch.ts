@@ -38,6 +38,28 @@ function proofLine(profile: CreatorProfile): string {
 }
 
 /**
+ * The sentence that states the price.
+ *
+ * A cost-per-thousand figure is the number a sponsor checks first, so it is
+ * quoted whenever the audience is what sets the price. When the production
+ * floor is binding, that same arithmetic divides a labour cost by a small
+ * audience and produces an absurd CPM. Quoting it would end the conversation,
+ * so a smaller creator states the basis honestly instead.
+ */
+function priceSentence(ask: RateLine): string {
+  const format = FORMAT_LABEL[ask.format].toLowerCase();
+  const platform = PLATFORM_LABEL[ask.platform];
+  const views = ask.effectiveImpressions.toLocaleString('en-GB');
+
+  if (ask.flooredByProduction) {
+    return `I have a ${format} on ${platform} available at ${gbp(ask.target)}, against ${views} median views. At this size the price reflects what the piece costs to make properly rather than a reach calculation, so it does not scale down further.`;
+  }
+
+  const cpm = (ask.target / Math.max(1, ask.effectiveImpressions)) * 1000;
+  return `I have a ${format} on ${platform} available at ${gbp(ask.target)}. That prices the placement at roughly ${gbp(cpm)} per thousand impressions against ${views} median views.`;
+}
+
+/**
  * Compose the opening pitch to a prospect.
  *
  * Pure: the same profile, prospect and rate line always produce the same email.
@@ -56,7 +78,7 @@ export function composePitch(profile: CreatorProfile, prospect: Prospect, ask: R
     'Three things worth knowing:',
     ...evidence.map((line) => `- ${line}`),
     '',
-    `I have a ${FORMAT_LABEL[ask.format].toLowerCase()} on ${PLATFORM_LABEL[ask.platform]} available at ${gbp(ask.target)}. That prices the placement at roughly ${gbp((ask.target / Math.max(1, ask.effectiveImpressions)) * 1000)} per thousand impressions against ${ask.effectiveImpressions.toLocaleString('en-GB')} median views.`,
+    priceSentence(ask),
   ];
 
   if (proof) parts.push('', proof);

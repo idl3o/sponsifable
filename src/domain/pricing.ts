@@ -3,6 +3,7 @@ import {
   GEO_WEIGHT,
   MEDIAN_ENGAGEMENT,
   NICHE_MULTIPLIER,
+  PRODUCTION_FLOOR,
   USAGE_UPLIFT,
   baseCpm,
 } from './benchmarks';
@@ -197,9 +198,22 @@ export function priceLine(
 ): RateLine {
   const cpm = baseCpm(channel.platform, format);
   const impressions = Math.max(0, Math.round(channel.medianViews));
-  const adjustments = [...audienceAdjustments(profile, channel), ...termsAdjustments(terms)];
+
+  const audience = audienceAdjustments(profile, channel);
+  const commercial = termsAdjustments(terms);
+  const adjustments = [...audience, ...commercial];
+
   const compounded = adjustments.reduce((acc, a) => acc * a.factor, 1);
-  const raw = (impressions / 1000) * cpm * compounded;
+  const mediaValue = (impressions / 1000) * cpm * compounded;
+
+  // Terms uplift the labour cost too: a buyout on a small channel is still a
+  // buyout. Audience multipliers do not, since the floor is about the work.
+  const termsFactor = commercial.reduce((acc, a) => acc * a.factor, 1);
+  const sellable = cpm > 0 && impressions > 0;
+  const productionFloor = sellable ? PRODUCTION_FLOOR[format] * termsFactor : 0;
+
+  const flooredByProduction = productionFloor > mediaValue;
+  const target = Math.max(mediaValue, productionFloor);
 
   return {
     channelId: channel.id,
@@ -208,9 +222,14 @@ export function priceLine(
     effectiveImpressions: impressions,
     baseCpm: cpm,
     adjustments,
-    target: roundToNegotiable(raw),
-    floor: roundToNegotiable(raw * 0.78),
-    stretch: roundToNegotiable(raw * 1.35),
+    mediaValue: roundToNegotiable(mediaValue),
+    productionFloor: roundToNegotiable(productionFloor),
+    flooredByProduction,
+    target: roundToNegotiable(target),
+    // Below the production floor the honest answer is no, so the walk-away
+    // price never drops beneath it however small the audience.
+    floor: roundToNegotiable(Math.max(mediaValue * 0.78, productionFloor)),
+    stretch: roundToNegotiable(Math.max(mediaValue * 1.35, productionFloor * 1.25)),
   };
 }
 

@@ -8,6 +8,8 @@ It is not a marketplace. Nobody is on the other side of it. It is the thing a cr
 
 **Derives a defensible price.** A rate card built from median views, engagement against the platform norm, audience geography, category demand, and the commercial terms actually on offer. Every price expands into the full derivation, with a sentence attached to each factor that the creator can say out loud when a sponsor asks why. A number you cannot explain is a number you will be talked out of.
 
+**Refuses to price your labour like an impression.** A dedicated video takes a day and a half whoever makes it, and cost-per-impression pricing alone tells a creator with a small audience to do that for thirty pounds. Every format carries a production floor derived from the hours it actually costs, and the price is the greater of the two. When the floor binds, the interface says so and shows both numbers, so the creator learns why rather than just seeing a figure.
+
 **Prices the terms, not just the placement.** Most creators quote one figure for a video and hand over usage rights and category exclusivity for nothing. Those are separate things a sponsor is buying. A full buyout is priced at nearly twice organic-only, because it is a media licence rather than a post.
 
 **Builds a media kit that survives scrutiny.** Leading with impressions per placement rather than summed follower counts, because summing followers across five platforms counts the same person five times and every experienced sponsor knows it. The kit also lists the problems a sponsor will spot, so the creator names them first.
@@ -27,9 +29,10 @@ If Ollama is running on the machine, the outreach tab offers to tighten the draf
 ```
 npm install
 npm run dev        # http://localhost:5180
-npm test           # 53 tests
+npm test           # 67 tests, including a nine-archetype calibration sweep
 npm run typecheck
 npm run build
+node scripts/playtest.mjs   # drives a real browser, screenshots every tab
 ```
 
 ## Where the numbers come from

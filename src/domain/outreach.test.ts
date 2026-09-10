@@ -184,3 +184,30 @@ describe('nextAction', () => {
     expect(action.label).toContain('opening pitch');
   });
 });
+
+describe('composePitch when the production floor binds', () => {
+  const nano: Channel = { ...channel, followers: 4_000, medianViews: 900, engagementRate: 0.045 };
+  const nanoProfile: CreatorProfile = { ...profile, channels: [nano] };
+  const nanoAsk = priceLine(nanoProfile, nano, 'dedicated');
+
+  it('never quotes a cost per thousand derived from a labour price', () => {
+    expect(nanoAsk.flooredByProduction).toBe(true);
+    const pitch = composePitch(nanoProfile, prospect, nanoAsk);
+    expect(pitch.body).not.toContain('per thousand impressions');
+  });
+
+  it('states the basis for the price honestly instead', () => {
+    const pitch = composePitch(nanoProfile, prospect, nanoAsk);
+    expect(pitch.body).toContain('costs to make');
+    expect(pitch.body).toContain('900');
+  });
+
+  it('still quotes a cost per thousand when reach sets the price', () => {
+    expect(ask.flooredByProduction).toBe(false);
+    expect(composePitch(profile, prospect, ask).body).toContain('per thousand impressions');
+  });
+
+  it('stays short even with the longer explanation', () => {
+    expect(composePitch(nanoProfile, prospect, nanoAsk).words).toBeLessThan(190);
+  });
+});

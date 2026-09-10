@@ -126,6 +126,16 @@ export interface RateLine {
   baseCpm: number;
   /** Ordered, named multipliers and uplifts applied to the base. */
   adjustments: Adjustment[];
+  /** What the audience alone is worth, before any production floor applies. */
+  mediaValue: number;
+  /** The least this asset can sell for and still be worth making. */
+  productionFloor: number;
+  /**
+   * True when the labour of making the asset, not the size of the audience,
+   * is setting the price. Small creators are almost always in this case, and
+   * the interface says so rather than quietly quoting a media number.
+   */
+  flooredByProduction: boolean;
   /** Recommended asking price, rounded to a negotiable increment. */
   target: number;
   /** Walk-away price. Below this, decline. */

@@ -199,3 +199,55 @@ describe('effectiveCpm', () => {
     expect(cpm).toBeGreaterThan(line.baseCpm * 0.5);
   });
 });
+
+describe('production floor', () => {
+  const nano: Channel = { ...channel, followers: 4_000, medianViews: 900, engagementRate: 0.045 };
+  const nanoProfile: CreatorProfile = { ...profile, channels: [nano] };
+
+  it('refuses to price a day of work at a nano audience rate', () => {
+    const line = priceLine(nanoProfile, nano, 'dedicated');
+    expect(line.mediaValue).toBeLessThan(100);
+    expect(line.target).toBeGreaterThanOrEqual(400);
+    expect(line.flooredByProduction).toBe(true);
+  });
+
+  it('reports the audience value separately, so the creator sees both numbers', () => {
+    const line = priceLine(nanoProfile, nano, 'dedicated');
+    expect(line.mediaValue).toBeGreaterThan(0);
+    expect(line.productionFloor).toBeGreaterThan(line.mediaValue);
+  });
+
+  it('never lets the walk-away price fall beneath the cost of the work', () => {
+    const line = priceLine(nanoProfile, nano, 'dedicated');
+    expect(line.floor).toBeGreaterThanOrEqual(line.productionFloor);
+  });
+
+  it('still charges more for a buyout on a small channel', () => {
+    const organic = priceLine(nanoProfile, nano, 'dedicated', DEFAULT_TERMS);
+    const buyout = priceLine(nanoProfile, nano, 'dedicated', {
+      ...DEFAULT_TERMS,
+      usageRights: 'full-buyout',
+    });
+    expect(buyout.target).toBeGreaterThan(organic.target * 1.5);
+  });
+
+  it('does not apply a floor to a channel with no audience at all', () => {
+    const dead: Channel = { ...channel, followers: 0, medianViews: 0, engagementRate: 0 };
+    const line = priceLine({ ...profile, channels: [dead] }, dead, 'dedicated');
+    expect(line.target).toBe(0);
+    expect(line.productionFloor).toBe(0);
+  });
+
+  it('leaves a large audience priced on reach rather than on labour', () => {
+    const line = priceLine(profile, channel, 'dedicated');
+    expect(line.flooredByProduction).toBe(false);
+    expect(line.target).toBe(line.mediaValue);
+  });
+
+  it('charges more for a dedicated video than a mention even when both are floored', () => {
+    const dedicated = priceLine(nanoProfile, nano, 'dedicated');
+    const mention = priceLine(nanoProfile, nano, 'mention');
+    expect(dedicated.flooredByProduction && mention.flooredByProduction).toBe(true);
+    expect(dedicated.target).toBeGreaterThan(mention.target);
+  });
+});
