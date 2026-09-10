@@ -32,10 +32,13 @@ Run the suite. It is fast.
 
 ```bash
 npm install
-npm test           # 67 tests
+npm test           # 99 tests
 npm run typecheck
 node scripts/playtest.mjs
+python -m pytest   # 32 tests, if you touch python/
 ```
+
+Anything under `python/` or `docs/provenance.md` is bound by the provenance rules in [docs/provenance.md](docs/provenance.md): sealing is opt-in, it cannot be retroactive, and a missing watermark is never treated as evidence. A change that weakens any of those will not be merged.
 
 ### The three rules that will get a pull request rejected if broken
 

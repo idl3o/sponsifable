@@ -4,7 +4,7 @@
 
 Most creators price sponsorship by guessing, or by repeating a number someone said on a podcast. Then a brand asks why, and the number falls apart. Sponsorable derives a price you can defend line by line, and hands you the sentence to say when you are asked to justify it.
 
-MIT licensed. No account, no server, no telemetry. `npm install && npm run dev`.
+MIT licensed. No account, no server, no telemetry. Built for a creator who runs their own tools on a small budget: one install, and everything stays on your machine.
 
 ---
 
@@ -21,6 +21,10 @@ MIT licensed. No account, no server, no telemetry. `npm install && npm run dev`.
 **Ranks prospects.** A 0 to 100 fit score over category adjacency, market overlap, budget against your walk-away price, and whether the brand has ever paid a creator at all. Every component reports its reasoning, so a low score can be argued with. Triage, not prophecy.
 
 **Writes the pitch and the follow-ups.** Composed from your own numbers: name the product, show delivered attention, state a price, ask one question, under 150 words. Follow-ups at days 4, 11 and 25, with a next-action flag on every prospect.
+
+**Keeps a deal log.** Every outcome, won or lost, is recorded against the price the card quoted, with the audience and terms frozen as they stood. It tells you whether you are being negotiated down, and whether the fit score predicts anything for you. If you choose to, one button opens the project's rate-data form with the deal filled in, rounded so it cannot identify you. Lost deals count too: they are the half of the market no rate survey ever sees.
+
+**Seals what you deliver, if you ask it to.** A sponsor who keeps your whitelisted ad running on day 90 has bought the ninety-day licence at the thirty-day price. `sponsorable seal` watermarks the file before delivery, signs a licence receipt, and has it timestamped. If the ad later turns up in a public ad library, `sponsorable verify` checks it, and the app prices the overrun as the tier the sponsor actually used. It is opt-in per deal, and it cannot be applied after delivery: the evidence, not the app, enforces that. [docs/provenance.md](docs/provenance.md) explains how, and what it cannot do.
 
 ---
 
@@ -68,24 +72,45 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to submit a rate, and what the pr
 
 **Call a paid language model.** The pitch composer is deterministic and complete without any model. If Ollama is running locally, the outreach tab offers to tighten the wording, with instructions to preserve every number and invent nothing. That is optional and stays on your machine.
 
-**Track you.** No analytics, no error reporting, no account. Your unreleased rates and prospect list are commercially sensitive, and the simplest way to keep them private is never to transmit them. Export and import are a JSON file you control.
+**Track you.** No analytics, no error reporting, no account. Your unreleased rates and prospect list are commercially sensitive, and the simplest way to keep them private is never to transmit them. Export and import are a JSON file you control. The single exception is sealing, which you choose deal by deal: it sends one salted hash to a public timestamp authority, and tells you before it does.
+
+**Treat a missing watermark as evidence.** Watermarks can be stripped, and the one Sponsorable uses ships with a removal model. A mark that decodes is evidence; a mark that does not proves nothing, and the tool never says otherwise.
 
 ---
 
 ## Running it
 
+Sponsorable is not on PyPI yet. From a checkout, with Node 20+ and Python 3.10+:
+
 ```bash
 npm install
+npm run bundle                 # build the app into the Python package
+pipx install .                 # the app and the CLI, without the watermark
+pipx install --force ".[seal]" # or with it: adds PyTorch, several hundred MB
+
+sponsorable                    # serves the app at http://127.0.0.1:5180
+sponsorable key                # the fingerprint to write into your contracts
+sponsorable setup              # fetch the watermark model once, ahead of time
+sponsorable seal dl-104 reel.png --source capture --workspace sponsorable.json
+sponsorable verify ad.jpg --started 2026-10-01 --workspace sponsorable.json
+```
+
+The server binds to 127.0.0.1 only. Serving from your own machine also means the optional Ollama integration talks to Ollama on the same machine, with no cross-origin configuration.
+
+For development:
+
+```bash
 npm run dev        # http://localhost:5180
-npm test           # 67 tests, including the calibration sweep
+npm test           # 99 tests, including the calibration sweep
 npm run typecheck
-npm run build
+python -m pytest   # 32 tests: receipts, timestamps, seal and verify end to end
 
 node scripts/playtest.mjs   # drives real Chrome, screenshots every tab,
                             # checks overflow, tap targets and broken numbers
+python scripts/survival.py --corpus DIR   # how the watermark survives re-encoding
 ```
 
-Requires Node 20 or newer. The play test uses the Chrome already installed on your machine rather than downloading a browser.
+The play test uses the Chrome already installed on your machine rather than downloading a browser.
 
 ---
 
@@ -99,11 +124,16 @@ src/domain/      pure functions: no clock, no randomness, no I/O
   mediakit.ts      derived audience facts and credibility warnings
   scoring.ts       prospect fit
   pitch.ts         email composition and follow-up cadence
+  deals.ts         deal log, personal calibration, rate submission, overrun pricing
+  workspace.ts     versioned file format; validates every import and old save
   localModel.ts    optional Ollama sharpening, fails quietly
   *.test.ts        property tests plus the calibration sweep
 src/store/       zustand and immer, persisted to localStorage
 src/components/  one view per tab
-scripts/         browser play test
+python/          the `sponsorable` CLI: serve, seal, verify
+  receipt.py       pure: the receipt, its commitment, and the rules a claim must pass
+docs/            provenance design
+scripts/         browser play test, watermark survival test
 ```
 
 React 18, TypeScript in strict mode, Vite, vitest, zustand. No CSS framework and no component library, so there is nothing to learn before changing something.
