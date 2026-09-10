@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+from .sshsig import NAMESPACE
+
 RECEIPT_VERSION = 1
 
 #: Bits of watermark payload. TrustMark's most robust schema carries 40, and a
@@ -154,7 +156,7 @@ def assess_claim(
     before = timestamped_on < started_on
     checks = (
         ("receipt matches its commitment", commitment_ok, "the terms are exactly those that were timestamped"),
-        ("creator's signature", signature_ok, "signed by the key named in the receipt"),
+        ("creator's signature", signature_ok, "an OpenSSH signature by the key named in the receipt"),
         ("timestamp token", timestamp_ok, "issued by the timestamp authority over this commitment"),
         (
             "sealed before the ad ran",
@@ -177,14 +179,19 @@ def assess_claim(
     )
 
 
-def sponsor_notice(receipt: dict[str, Any], fingerprint: str, timestamped_at: str) -> str:
+def sponsor_notice(
+    receipt: dict[str, Any], *, fingerprint: str, allowed_signers: str, identity: str, timestamped_at: str
+) -> str:
     """
     The plain-text receipt the sponsor receives with the delivery.
 
     It says the file is marked and what the mark records, because deterrence
     only works when the sponsor knows, and a hidden mark found later damages
-    the relationship it was meant to protect.
+    the relationship it was meant to protect. It also tells the sponsor how
+    to check the signature with OpenSSH alone, because a receipt the other
+    party cannot verify without the creator's software is worth less.
     """
+    serial = receipt["serial"]
     return "\n".join(
         [
             f"Licence receipt: {receipt['creator']} to {receipt['sponsor']}",
@@ -196,13 +203,20 @@ def sponsor_notice(receipt: dict[str, Any], fingerprint: str, timestamped_at: st
             f"Category exclusivity: {receipt['exclusivityDays']} days.",
             f"Granted on {receipt['grantedOn']}.",
             "",
-            "This file carries an invisible watermark holding serial "
-            f"{receipt['serial']}, which identifies this receipt. It records nothing else.",
+            f"This file carries an invisible watermark holding serial {serial}, which identifies",
+            "this receipt. It records nothing else.",
             "",
-            f"Commitment (SHA-256 of the receipt): {commitment(receipt)}",
-            f"Timestamped by an RFC 3161 authority at {timestamped_at}.",
-            f"Signed by the key with fingerprint {fingerprint}, which matches the one in our agreement.",
+            f"The signed receipt is {serial}.receipt.json, with its signature in {serial}.receipt.json.sig.",
+            f"Its SHA-256, {commitment(receipt)},",
+            f"was timestamped by an RFC 3161 authority at {timestamped_at}.",
+            f"It is signed with the SSH key {fingerprint}, the fingerprint in our agreement.",
             "",
-            "Please keep this receipt with the contract. The full signed receipt is attached as JSON.",
+            "To check the signature with nothing but OpenSSH, save this line as allowed_signers:",
+            f"  {allowed_signers}",
+            "and run:",
+            f"  ssh-keygen -Y verify -f allowed_signers -I {identity} -n {NAMESPACE} \\",
+            f"    -s {serial}.receipt.json.sig < {serial}.receipt.json",
+            "",
+            "Please keep these files with the contract.",
         ]
     )

@@ -1,11 +1,12 @@
 """Sealing a deal's asset: opt-in, before delivery, once.
 
 The order matters and is fixed. Refusals are checked before anything is
-touched. The creator confirms, having been told exactly what will be bound
-and that one digest will leave the machine. Then: watermark, embed the
-manifest, hash the delivered file, build and sign the receipt, timestamp it,
-write the ledger, and record the seal on the deal. If any step before the
-timestamp fails, nothing has left the machine and nothing is recorded.
+touched, including whether there is an SSH key to sign with. The creator
+confirms, having been told exactly what will be bound and that one digest
+will leave the machine. Then: watermark, embed the manifest, hash the
+delivered file, build the receipt, sign it with the creator's SSH key,
+timestamp it, write the ledger, and record the seal on the deal. If signing
+or timestamping fails, the marked file is removed and nothing is recorded.
 """
 
 from __future__ import annotations
@@ -17,8 +18,8 @@ from typing import Callable
 
 from PIL import Image
 
-from . import __version__, keys, ledger, manifest, receipt, workspace
-from .timestamp import Timestamper
+from . import __version__, keys, ledger, manifest, receipt, sshsig, workspace
+from .timestamp import Stamp, Timestamper
 from .watermark import Watermarker, perceptual_hash
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
@@ -38,7 +39,7 @@ class SealPlan:
     workspace_path: Path
     content_source: str
 
-    def summary(self, tsa: str) -> str:
+    def summary(self, tsa: str, fingerprint: str) -> str:
         terms = self.deal.get("terms", {})
         days = self.deal.get("paidUsageDays")
         window = "unlimited" if days is None else f"{days} days"
@@ -51,6 +52,7 @@ class SealPlan:
                 f"  usage rights    {terms.get('usageRights')}, paid usage {window}",
                 f"  exclusivity     {terms.get('exclusivityDays', 0)} days",
                 f"  made by         {self.content_source} (stated in the file's C2PA manifest)",
+                f"  signed by       SSH key {fingerprint}",
                 "",
                 f"It writes a watermarked copy to {self.out}. Deliver that file, not the original.",
                 "Once delivered, this deal can never be sealed again, by design.",
@@ -89,6 +91,7 @@ class Deps:
 
     watermarker: Watermarker
     timestamper: Timestamper
+    signer: keys.Signer
     salt: Callable[[], bytes]
     today: str
     home: Path
@@ -146,9 +149,26 @@ def _mark(p: SealPlan, deps: Deps, bits: str, creator: str) -> None:
         staging.unlink(missing_ok=True)
 
 
+def _sign_and_stamp(p: SealPlan, deps: Deps, signed: bytes, commit: str) -> tuple[str, Stamp]:
+    """
+    Sign the receipt, then timestamp its commitment. If either fails, the
+    marked file is removed: a file carrying a serial that is in no ledger
+    would be delivered as if it were sealed.
+    """
+    try:
+        signature = deps.signer.sign(signed)
+    except Exception as error:  # noqa: BLE001 - a cancelled passphrase must not leave a deliverable
+        p.out.unlink(missing_ok=True)
+        raise SealRefused(f"the receipt was not signed ({error}). Nothing was recorded") from error
+    try:
+        return signature, deps.timestamper(bytes.fromhex(commit))
+    except Exception as error:  # noqa: BLE001 - as above
+        p.out.unlink(missing_ok=True)
+        raise SealRefused(f"the timestamp authority did not answer ({error}). Nothing was recorded") from error
+
+
 def execute(p: SealPlan, deps: Deps, creator: str) -> dict:
     """Seal the asset. Call only after the creator has agreed to `p.summary()`."""
-    signing_key = keys.load_or_create(deps.home)
     master_sha = _sha256(p.source)
     salt, bits = _unused_serial(p, deps, master_sha)
     _mark(p, deps, bits, creator)
@@ -161,24 +181,28 @@ def execute(p: SealPlan, deps: Deps, creator: str) -> dict:
         master_sha256=master_sha,
         sealed_sha256=_sha256(p.out),
         perceptual_hash=perceptual_hash(Image.open(p.out)),
-        public_key=keys.public_hex(signing_key),
+        public_key=sshsig.normalise(deps.signer.public_key),
         sealed_on=deps.today,
     )
+    signed = receipt.canonical(body)
     commit = receipt.commitment(body)
-    try:
-        stamp = deps.timestamper(bytes.fromhex(commit))
-    except Exception as error:  # noqa: BLE001 - any failure here must not leave a deliverable behind
-        # A marked file with no ledger entry would be delivered as if sealed.
-        p.out.unlink(missing_ok=True)
-        raise SealRefused(f"the timestamp authority did not answer ({error}). Nothing was recorded") from error
+    signature, stamp = _sign_and_stamp(p, deps, signed, commit)
     record = {
         "receipt": body,
         "commitment": commit,
-        "signature": keys.sign(signing_key, bytes.fromhex(commit)),
+        "signature": signature,
+        "signatureFormat": "sshsig",
         "timestamp": stamp.to_json(),
     }
-    notice = receipt.sponsor_notice(body, keys.fingerprint(body["publicKey"]), stamp.time.isoformat())
-    ledger.write(deps.home, record, notice)
+    identity = keys.principal(creator)
+    notice = receipt.sponsor_notice(
+        body,
+        fingerprint=sshsig.fingerprint(body["publicKey"]),
+        allowed_signers=keys.allowed_signers_line(identity, body["publicKey"]),
+        identity=identity,
+        timestamped_at=stamp.time.isoformat(),
+    )
+    ledger.write(deps.home, record, notice, signed)
 
     data = workspace.load(p.workspace_path)
     deal = workspace.find_deal(data, p.deal["id"])

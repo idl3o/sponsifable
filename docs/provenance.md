@@ -40,9 +40,19 @@ The receipt is canonical JSON with sorted keys:
 | `masterSha256` | The file before marking. |
 | `sealedSha256` | The exact file delivered. |
 | `perceptualHash` | A pHash of the delivered file, for matching re-encoded copies when a watermark has not survived. |
-| `publicKey` | The creator's Ed25519 public key. Its fingerprint belongs in the contract or invoice, which is what makes a self-generated key sufficient: the sponsor already knows who they contracted with. |
+| `publicKey` | The creator's OpenSSH public key. Its SHA256 fingerprint belongs in the contract or invoice, which is what makes a key nobody else vouches for sufficient: the sponsor already knows who they contracted with. |
 
-The **commitment** is the SHA-256 of that canonical JSON. The creator signs the commitment with their key, and a timestamp authority timestamps it. The receipt, the signature and the timestamp token together form the seal. A C2PA manifest carrying the same terms as IPTC rights metadata is embedded in the delivered file, for anyone whose pipeline preserves it. Most platforms strip it, which is why the watermark exists.
+The **commitment** is the SHA-256 of that canonical JSON, and a timestamp authority timestamps it. The creator signs the same bytes with their own SSH key, using OpenSSH's signature format (SSHSIG, namespace `sponsorable-receipt`). The receipt, the signature and the timestamp token together form the seal.
+
+## Signing with the creator's SSH key
+
+Sponsorable holds no signing key of its own. `ssh-keygen -Y sign` does the signing, so a passphrase, ssh-agent or a hardware key (`ed25519-sk`) protects the key exactly as it protects the creator's server logins, and Sponsorable never reads the private half. Three things follow:
+
+- **The sponsor can check a receipt with nothing from this project.** The notice carries an `allowed_signers` line and the `ssh-keygen -Y verify` command. OpenSSH ships with Windows, macOS and Linux. A receipt the other party can verify only with the creator's own software would be worth less.
+- **Identity can be checked against something public.** A technical creator has usually published their key at `github.com/<user>.keys`. The contract's fingerprint remains the binding link; the public key is corroboration.
+- **The namespace stops replay.** A signature made for a receipt cannot be presented as a signature over anything else, and the reverse.
+
+Ed25519 SSH signatures are produced and checked in `python/sponsorable/sshsig.py` directly, byte-compatible with OpenSSH in both directions; the tests prove it against the installed `ssh-keygen`. Other key types are signed and checked by `ssh-keygen`. A C2PA manifest carrying the same terms as IPTC rights metadata is embedded in the delivered file, for anyone whose pipeline preserves it. Most platforms strip it, which is why the watermark exists.
 
 ## The one network call
 
@@ -90,7 +100,8 @@ A proxy is not a platform. The go or no-go test is manual and belongs to the cre
 
 ## What testing changed
 
-- **C2PA signs with ES256, not Ed25519.** An Ed25519 chain signed, but the claim signature then failed validation. The receipt still uses Ed25519. C2PA gets its own P-256 key under a local root, because C2PA refuses a bare self-signed certificate.
+- **C2PA signs with ES256, not Ed25519.** An Ed25519 chain signed, but the claim signature then failed validation. C2PA gets its own P-256 key under a local root, because C2PA refuses a bare self-signed certificate and an SSH key cannot provide an X.509 chain. That key carries no identity and can be regenerated; receipts are signed with the creator's SSH key.
+- **A failed signature removes the marked file,** exactly as a failed timestamp does. A cancelled passphrase prompt must not leave a deliverable behind.
 - **The creator must say how the asset was made.** A C2PA claim of creation needs a digital source type, and the tool cannot know whether a file came from a camera, from software or from a model. `seal --source capture|creation|ai|ai-composite` is required rather than defaulted, because a default would be a claim nobody made. This also makes the manifest an honest AI disclosure where one is needed.
 - **The licence window is frozen on the deal.** `paidUsageDays` is recorded when the deal closes, not looked up later, because the licence is what was agreed rather than what the benchmarks say a tier means today. It also keeps every market assumption out of the Python side.
 - **A failed timestamp removes the marked file.** Otherwise a file carrying a serial that is in no ledger could be delivered as if it were sealed.
@@ -103,4 +114,5 @@ A proxy is not a platform. The go or no-go test is manual and belongs to the cre
 - **Treating a missing watermark as evidence.** TrustMark ships a removal model. The mark stops careless reuse, not a sponsor determined to strip it, and absence proves nothing.
 - **Automated monitoring of ad libraries.** The APIs require identity verification and cover limited ground. Detection is a person downloading an ad and running `verify`.
 - **Attesting the media kit's statistics.** A creator signing their own view counts proves nothing. Only attestation from the platform would, and that needs the OAuth and platform APIs the project declines.
-- **Proving identity to strangers.** A self-generated key shows as an unrecognised signer to any C2PA validator. The trust that matters here is bilateral and is established by the contract.
+- **Proving identity to strangers.** The C2PA chain shows as an unrecognised signer to any validator, and the SSH key is vouched for by nobody but the creator and, where published, their GitHub account. The trust that matters here is bilateral and is established by the contract.
+- **Holding the creator's key.** Sponsorable never reads or stores a private signing key. OpenSSH does that job.

@@ -116,8 +116,24 @@ def test_unlimited_usage_never_overruns():
     assert result.overrun_days == 0
 
 
+def notice():
+    return receipt.sponsor_notice(
+        build(),
+        fingerprint="SHA256:abc",
+        allowed_signers='ada-trelawny namespaces="sponsorable-receipt" ssh-ed25519 AAAA',
+        identity="ada-trelawny",
+        timestamped_at="2026-09-10T12:00:00+00:00",
+    )
+
+
 def test_the_sponsor_is_told_the_file_is_marked():
-    notice = receipt.sponsor_notice(build(), "abcd " * 8, "2026-09-10T12:00:00+00:00")
-    assert "invisible watermark" in notice
-    assert "0a1b2c3d4e" in notice
-    assert "30 days of paid usage" in notice
+    text = notice()
+    assert "invisible watermark" in text
+    assert "0a1b2c3d4e" in text
+    assert "30 days of paid usage" in text
+
+
+def test_the_sponsor_is_told_how_to_verify_without_this_software():
+    text = notice()
+    assert "ssh-keygen -Y verify -f allowed_signers -I ada-trelawny -n sponsorable-receipt" in text
+    assert "SHA256:abc" in text

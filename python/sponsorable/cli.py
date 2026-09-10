@@ -3,7 +3,7 @@
     sponsorable                     serve the app on this machine
     sponsorable seal DEAL FILE      establish rights on a won deal, before delivery
     sponsorable verify FILE         check a downloaded ad against your seals
-    sponsorable key                 show the fingerprint to put in your contracts
+    sponsorable key --ssh PATH      choose the SSH key that signs your receipts
     sponsorable setup               download the watermark model now
 """
 
@@ -16,7 +16,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from . import keys, ledger, manifest
+from . import keys, ledger, manifest, sshsig
 from .timestamp import DEFAULT_TSA
 
 
@@ -53,7 +53,8 @@ def _parser() -> argparse.ArgumentParser:
     verify.add_argument("--source", default="", help="where you found it, e.g. the ad library link")
     verify.add_argument("--workspace", type=Path, help="record a verified sighting in this exported file")
 
-    sub.add_parser("key", help="show your signing key's fingerprint")
+    key = sub.add_parser("key", help="choose or show the SSH key that signs your receipts")
+    key.add_argument("--ssh", type=Path, help="path to your SSH private key, e.g. ~/.ssh/id_ed25519")
     sub.add_parser("setup", help="download the watermark model now rather than mid-seal")
     return parser
 
@@ -75,18 +76,19 @@ def _seal(args: argparse.Namespace, home: Path) -> int:
     if not _watermark_installed():
         return 1
     try:
+        signer = keys.signer_for(home)
         p = sealing.plan(args.workspace, args.deal, args.file, args.out, args.source, home)
-    except (sealing.SealRefused, FileNotFoundError, ValueError) as error:
+    except (keys.NoKey, sealing.SealRefused, FileNotFoundError, ValueError) as error:
         print(f"Not sealed: {error}.", file=sys.stderr)
         return 1
 
-    print(p.summary(args.tsa), "\n")
+    print(p.summary(args.tsa, sshsig.fingerprint(signer.public_key)), "\n")
     if not args.yes and input("Type 'seal' to proceed: ").strip() != "seal":
         print("Nothing was sealed.")
         return 1
 
     creator = workspace.load(args.workspace).get("profile", {}).get("name", "")
-    deps = sealing.Deps(TrustMarkWatermarker(), remote(args.tsa), lambda: secrets.token_bytes(16),
+    deps = sealing.Deps(TrustMarkWatermarker(), remote(args.tsa), signer, lambda: secrets.token_bytes(16),
                         date.today().isoformat(), home, embed_manifest=not args.no_c2pa)
     try:
         record = sealing.execute(p, deps, creator)
@@ -98,7 +100,8 @@ def _seal(args: argparse.Namespace, home: Path) -> int:
     folder = ledger.ledger_dir(home)
     print(f"\nSealed. Serial {serial}, timestamped {record['timestamp']['time']}.")
     print(f"  Deliver:          {p.out}")
-    print(f"  Send the sponsor: {folder / (serial + '.txt')} and {folder / (serial + '.json')}")
+    print(f"  Send the sponsor: {serial}.txt, {serial}.receipt.json and {serial}.receipt.json.sig")
+    print(f"                    from {folder}")
     print(f"  Then import {args.workspace} into the app and set the delivery date.")
     return 0
 
@@ -143,6 +146,22 @@ def _verify(args: argparse.Namespace, home: Path) -> int:
     return 0 if finding.kind == "claim" and finding.claim and finding.claim.holds else 2
 
 
+def _key(args: argparse.Namespace, home: Path) -> int:
+    """Choose or show the SSH key that signs receipts."""
+    try:
+        if args.ssh:
+            keys.set_key(home, args.ssh.expanduser())
+        public = keys.signer_for(home).public_key
+    except keys.NoKey as error:
+        print(f"{error}.", file=sys.stderr)
+        return 1
+    print(f"Signing key:  {keys.configured_key(home)}")
+    print(f"Fingerprint:  {sshsig.fingerprint(public)}")
+    print("\nWrite the fingerprint into your contracts. It is how a sponsor knows a receipt is yours.")
+    print("If this key is on your GitHub account, a sponsor can also match it at github.com/<you>.keys.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> None:
     """Entry point."""
     sys.stdout.reconfigure(encoding="utf-8")
@@ -157,9 +176,7 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "verify":
         sys.exit(_verify(args, home))
     elif args.command == "key":
-        key = keys.load_or_create(home)
-        print(f"Fingerprint: {keys.fingerprint(keys.public_hex(key))}")
-        print("Write this into your contracts. It is how a sponsor knows a receipt is yours.")
+        sys.exit(_key(args, home))
     elif args.command == "setup":
         if not _watermark_installed():
             sys.exit(1)

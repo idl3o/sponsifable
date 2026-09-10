@@ -5,14 +5,19 @@ bits. It survives a lossless save and nothing else, which is all these tests
 need: they test the order of operations and the rules, not TrustMark.
 """
 
+import dataclasses
 import json
+import shutil
+import subprocess
 from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from PIL import Image, ImageDraw
 
 from sponsorable import ledger, manifest, sealing
+from sponsorable.keys import Ed25519Signer
 from sponsorable.timestamp import Stamp
 from sponsorable.verifying import record_sighting, verify
 
@@ -59,8 +64,9 @@ def setup(tmp_path: Path):
     ws.write_text(json.dumps({"version": 2, "profile": {"name": "Ada Trelawny"}, "deals": [deal]}), encoding="utf-8")
     home = tmp_path / "home"
     counter = iter(range(1, 1000))
-    deps = sealing.Deps(LsbWatermarker(), fake_stamp, lambda: bytes([next(counter)]) * 16, "2026-09-10", home,
-                        embed_manifest=False)
+    signer = Ed25519Signer(Ed25519PrivateKey.from_private_bytes(bytes(range(32))))
+    deps = sealing.Deps(LsbWatermarker(), fake_stamp, signer, lambda: bytes([next(counter)]) * 16, "2026-09-10",
+                        home, embed_manifest=False)
     return tmp_path, asset, ws, home, deps
 
 
@@ -117,7 +123,7 @@ def test_a_failed_timestamp_leaves_no_deliverable_and_no_record(setup):
     def offline(_digest):
         raise ConnectionError("offline")
 
-    broken = sealing.Deps(deps.watermarker, offline, deps.salt, deps.today, home, embed_manifest=False)
+    broken = dataclasses.replace(deps, timestamper=offline)
     plan = sealing.plan(ws, "dl-104", asset, None, "capture", home)
     with pytest.raises(sealing.SealRefused, match="Nothing was recorded"):
         sealing.execute(plan, broken, "Ada Trelawny")
@@ -126,9 +132,44 @@ def test_a_failed_timestamp_leaves_no_deliverable_and_no_record(setup):
     assert json.loads(ws.read_text(encoding="utf-8"))["deals"][0]["seal"] is None
 
 
+def test_a_cancelled_passphrase_leaves_no_deliverable_and_no_record(setup):
+    tmp, asset, ws, home, deps = setup
+
+    class Cancelled:
+        public_key = deps.signer.public_key
+
+        def sign(self, message):
+            raise RuntimeError("passphrase prompt cancelled")
+
+    plan = sealing.plan(ws, "dl-104", asset, None, "capture", home)
+    with pytest.raises(sealing.SealRefused, match="not signed"):
+        sealing.execute(plan, dataclasses.replace(deps, signer=Cancelled()), "Ada Trelawny")
+    assert not plan.out.exists()
+    assert list(ledger.entries(home)) == []
+
+
+@pytest.mark.skipif(shutil.which("ssh-keygen") is None, reason="ssh-keygen not installed")
+def test_the_sponsor_can_verify_the_receipt_with_openssh_alone(setup):
+    """Run the exact command the notice gives the sponsor, on the files the seal wrote."""
+    tmp, _, _, home, _ = setup
+    _, record = seal(setup)
+    serial = record["receipt"]["serial"]
+    folder = ledger.ledger_dir(home)
+    notice = (folder / f"{serial}.txt").read_text(encoding="utf-8").splitlines()
+    signers_line = notice[notice.index("To check the signature with nothing but OpenSSH, save this line as allowed_signers:") + 1]
+    (folder / "allowed_signers").write_text(signers_line.strip() + "\n", encoding="ascii")
+    result = subprocess.run(
+        ["ssh-keygen", "-Y", "verify", "-f", "allowed_signers", "-I", "ada-trelawny", "-n", "sponsorable-receipt",
+         "-s", f"{serial}.receipt.json.sig"],
+        input=(folder / f"{serial}.receipt.json").read_bytes(), capture_output=True, cwd=folder,
+    )
+    assert result.returncode == 0, result.stderr.decode()
+    assert b"Good" in result.stdout + result.stderr
+
+
 def test_the_c2pa_manifest_carries_the_licence(setup):
     tmp, asset, ws, home, deps = setup
-    with_c2pa = sealing.Deps(deps.watermarker, fake_stamp, deps.salt, deps.today, home, embed_manifest=True)
+    with_c2pa = dataclasses.replace(deps, embed_manifest=True)
     plan, record = seal(setup, deps=with_c2pa, source="ai-composite")
     licence = manifest.read_licence(plan.out)
     assert licence is not None and licence["serial"] == record["receipt"]["serial"]

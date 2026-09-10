@@ -1,69 +1,142 @@
 """The creator's signing key, and a local certificate chain for C2PA.
 
-Two keys, for two jobs. The Ed25519 key signs licence receipts; its
-fingerprint goes into the contract, which is what makes a self-generated key
-sufficient: the sponsor contracted with the creator and can check it. The
-P-256 key exists only because C2PA needs an X.509 chain, and its Ed25519 path
-failed validation in testing. A C2PA validator shows that chain as an
-unrecognised signer, which is correct: nobody vouches for it but the creator.
+Receipts are signed with the creator's own SSH key through `ssh-keygen -Y
+sign`. Sponsorable never reads the private key: passphrases, ssh-agent and
+hardware keys (`ed25519-sk`) are OpenSSH's business, which is where a key
+belongs. The public key is what goes into the receipt, its SHA256
+fingerprint goes into the contract, and a technical creator has usually
+published it already, at github.com/<user>.keys.
 
-Both keys are created on first use under the Sponsorable home directory and
-never leave the machine.
+C2PA needs an X.509 chain, which an SSH key cannot provide, so a separate
+P-256 key signs manifests under a local root. It carries no identity: a
+validator shows it as untrusted, which is accurate, and the receipt signature
+is what a claim rests on. It is created on first use and can be regenerated.
 """
 
 from __future__ import annotations
 
 import datetime as dt
-import hashlib
+import json
+import re
+import shutil
+import subprocess
+import tempfile
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Protocol
 
 from cryptography import x509
-from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
+
+from . import sshsig
 
 _PKCS8 = (serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
 
 
-def load_or_create(home: Path) -> Ed25519PrivateKey:
-    """The creator's receipt-signing key, created under `home` the first time."""
-    path = home / "key.pem"
-    if path.exists():
-        key = serialization.load_pem_private_key(path.read_bytes(), password=None)
-        if not isinstance(key, Ed25519PrivateKey):
-            raise ValueError(f"{path} is not an Ed25519 key")
-        return key
+class NoKey(Exception):
+    """No usable SSH key is configured, with instructions for making one."""
+
+
+class Signer(Protocol):
+    """Signs receipts. Production uses ssh-keygen; tests use an in-memory key."""
+
+    @property
+    def public_key(self) -> str: ...
+
+    def sign(self, message: bytes) -> str: ...
+
+
+def _public_key_for(key: Path) -> str:
+    pub = key if key.suffix == ".pub" else key.with_name(key.name + ".pub")
+    if not pub.exists():
+        raise NoKey(f"no public key at {pub}")
+    return sshsig.normalise(pub.read_text(encoding="utf-8"))
+
+
+@dataclass(frozen=True)
+class SshKeygenSigner:
+    """Signs with `ssh-keygen -Y sign`, which prompts for a passphrase or uses the agent itself."""
+
+    key: Path
+    public_key: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "public_key", _public_key_for(self.key))
+
+    def sign(self, message: bytes) -> str:
+        exe = shutil.which("ssh-keygen")
+        if exe is None:
+            raise NoKey("ssh-keygen is not installed")
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "receipt.json"
+            target.write_bytes(message)
+            # stdin and the console are left alone so OpenSSH can ask for a passphrase.
+            result = subprocess.run([exe, "-Y", "sign", "-q", "-f", str(self.key), "-n", sshsig.NAMESPACE, str(target)])
+            signature = target.with_name("receipt.json.sig")
+            if result.returncode != 0 or not signature.exists():
+                raise NoKey("ssh-keygen did not sign the receipt")
+            return signature.read_text(encoding="ascii")
+
+
+@dataclass(frozen=True)
+class Ed25519Signer:
+    """Signs in memory. For tests, and for nothing that holds a real identity."""
+
+    private_key: Ed25519PrivateKey
+
+    @property
+    def public_key(self) -> str:
+        return sshsig.public_key_line(self.private_key)
+
+    def sign(self, message: bytes) -> str:
+        return sshsig.sign_ed25519(self.private_key, message)
+
+
+def _config_path(home: Path) -> Path:
+    return home / "config.json"
+
+
+def configured_key(home: Path) -> Path | None:
+    """The key set with `sponsorable key --ssh`, else ~/.ssh/id_ed25519 if it exists."""
+    config = _config_path(home)
+    if config.exists():
+        path = json.loads(config.read_text(encoding="utf-8")).get("sshKey")
+        if path:
+            return Path(path)
+    default = Path.home() / ".ssh" / "id_ed25519"
+    return default if default.with_name("id_ed25519.pub").exists() else None
+
+
+def set_key(home: Path, key: Path) -> str:
+    """Remember which SSH key signs receipts. Returns its public key line."""
+    public = _public_key_for(key)
     home.mkdir(parents=True, exist_ok=True)
-    key = Ed25519PrivateKey.generate()
-    path.write_bytes(key.private_bytes(*_PKCS8))
-    return key
+    _config_path(home).write_text(json.dumps({"sshKey": str(key.resolve())}, indent=2), encoding="utf-8")
+    return public
 
 
-def public_hex(key: Ed25519PrivateKey) -> str:
-    """The raw public key, hex."""
-    return key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()
+def signer_for(home: Path) -> SshKeygenSigner:
+    """The production signer, or instructions when there is no key to sign with."""
+    key = configured_key(home)
+    if key is None:
+        raise NoKey(
+            "no SSH key to sign receipts with. Make one with `ssh-keygen -t ed25519` "
+            "(or `-t ed25519-sk` for a hardware key), then run `sponsorable key --ssh ~/.ssh/id_ed25519`"
+        )
+    return SshKeygenSigner(key)
 
 
-def fingerprint(public_key_hex: str) -> str:
-    """A short, readable fingerprint to write into a contract: 8 groups of 4 hex."""
-    digest = hashlib.sha256(bytes.fromhex(public_key_hex)).hexdigest()[:32]
-    return " ".join(digest[i : i + 4] for i in range(0, 32, 4))
+def principal(name: str) -> str:
+    """A signer identity for allowed_signers: lowercase, no spaces."""
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "creator"
 
 
-def sign(key: Ed25519PrivateKey, message: bytes) -> str:
-    """Sign, returning hex."""
-    return key.sign(message).hex()
-
-
-def verify(public_key_hex: str, signature_hex: str, message: bytes) -> bool:
-    """True when the signature is the named key's over the message."""
-    try:
-        Ed25519PublicKey.from_public_bytes(bytes.fromhex(public_key_hex)).verify(bytes.fromhex(signature_hex), message)
-        return True
-    except (InvalidSignature, ValueError):
-        return False
+def allowed_signers_line(identity: str, public_key: str) -> str:
+    """The line a sponsor saves as allowed_signers to check a receipt with ssh-keygen."""
+    return f'{identity} namespaces="{sshsig.NAMESPACE}" {sshsig.normalise(public_key)}'
 
 
 def _name(common: str) -> x509.Name:

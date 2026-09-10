@@ -24,7 +24,7 @@ MIT licensed. No account, no server, no telemetry. Built for a creator who runs 
 
 **Keeps a deal log.** Every outcome, won or lost, is recorded against the price the card quoted, with the audience and terms frozen as they stood. It tells you whether you are being negotiated down, and whether the fit score predicts anything for you. If you choose to, one button opens the project's rate-data form with the deal filled in, rounded so it cannot identify you. Lost deals count too: they are the half of the market no rate survey ever sees.
 
-**Seals what you deliver, if you ask it to.** A sponsor who keeps your whitelisted ad running on day 90 has bought the ninety-day licence at the thirty-day price. `sponsorable seal` watermarks the file before delivery, signs a licence receipt, and has it timestamped. If the ad later turns up in a public ad library, `sponsorable verify` checks it, and the app prices the overrun as the tier the sponsor actually used. It is opt-in per deal, and it cannot be applied after delivery: the evidence, not the app, enforces that. [docs/provenance.md](docs/provenance.md) explains how, and what it cannot do.
+**Seals what you deliver, if you ask it to.** A sponsor who keeps your whitelisted ad running on day 90 has bought the ninety-day licence at the thirty-day price. `sponsorable seal` watermarks the file before delivery, signs a licence receipt, and has it timestamped. If the ad later turns up in a public ad library, `sponsorable verify` checks it, and the app prices the overrun as the tier the sponsor actually used. It is opt-in per deal, and it cannot be applied after delivery: the evidence, not the app, enforces that. Receipts are signed with your own SSH key, so a sponsor can check one with `ssh-keygen`, which is already on their machine. [docs/provenance.md](docs/provenance.md) explains how, and what it cannot do.
 
 ---
 
@@ -89,7 +89,7 @@ pipx install .                 # the app and the CLI, without the watermark
 pipx install --force ".[seal]" # or with it: adds PyTorch, several hundred MB
 
 sponsorable                    # serves the app at http://127.0.0.1:5180
-sponsorable key                # the fingerprint to write into your contracts
+sponsorable key --ssh ~/.ssh/id_ed25519   # sign receipts with your SSH key
 sponsorable setup              # fetch the watermark model once, ahead of time
 sponsorable seal dl-104 reel.png --source capture --workspace sponsorable.json
 sponsorable verify ad.jpg --started 2026-10-01 --workspace sponsorable.json
@@ -103,7 +103,7 @@ For development:
 npm run dev        # http://localhost:5180
 npm test           # 99 tests, including the calibration sweep
 npm run typecheck
-python -m pytest   # 32 tests: receipts, timestamps, seal and verify end to end
+python -m pytest   # 43 tests: receipts, SSH signatures, timestamps, seal and verify
 
 node scripts/playtest.mjs   # drives real Chrome, screenshots every tab,
                             # checks overflow, tap targets and broken numbers

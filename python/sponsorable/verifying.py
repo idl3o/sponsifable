@@ -13,7 +13,7 @@ from typing import Callable, Literal
 
 from PIL import Image
 
-from . import keys, ledger, manifest, receipt, workspace
+from . import ledger, manifest, receipt, sshsig, workspace
 from .timestamp import Stamp, token_time, token_valid
 from .watermark import RESEMBLANCE, Watermarker, hash_distance, perceptual_hash
 
@@ -74,7 +74,7 @@ def verify(
     claim = receipt.assess_claim(
         body,
         commitment_ok=receipt.commitment(body) == commit,
-        signature_ok=keys.verify(body["publicKey"], entry["signature"], digest),
+        signature_ok=sshsig.verify(body["publicKey"], entry["signature"], receipt.canonical(body)),
         timestamp_ok=stamp_ok,
         timestamped_on=stamped_on,
         started_on=started_on,

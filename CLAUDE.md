@@ -20,6 +20,7 @@
 - **Sealing is the only network call that carries anything derived from the creator's data.** One salted SHA-256 digest goes to an RFC 3161 timestamp authority, opt-in per deal, and the confirmation says so first. The only other access is TrustMark's one-off model download (`sponsorable setup`), which sends nothing about the creator.
 - **Seal each aspect ratio delivered.** The survival proxy shows model Q / BCH_SUPER survives compression, downscaling, crops, banners, grading and H.264, and fails on reframing a landscape to 4:5 or 9:16. Do not switch model or schema without rerunning `scripts/survival.py`.
 - **The licence window is frozen on the deal** (`Deal.paidUsageDays`, null for unlimited). Python reads it from the deal; never copy `PAID_USAGE_DAYS` into Python.
+- **Receipts are signed with the creator's SSH key through `ssh-keygen -Y sign`** (SSHSIG, namespace `sponsorable-receipt`). Sponsorable never reads or stores the private key; passphrases, agents and hardware keys are OpenSSH's job. The sponsor verifies with stock `ssh-keygen`. Do not reintroduce a Sponsorable-held signing key, and keep `sshsig.py` byte-compatible with OpenSSH: `test_sshsig.py` checks both directions against the installed binary.
 - **`--source` is required on `seal`.** The tool cannot know how an asset was made, and C2PA's claim of creation states it. No default.
 - **Disclosed, not covert.** The receipt tells the sponsor the file is marked.
 - **A missing watermark proves nothing.** TrustMark ships a removal model. No copy may treat absence as evidence.
@@ -39,6 +40,7 @@
 - **C2PA signs with ES256.** An Ed25519 chain signed but failed claim-signature validation. The C2PA leaf needs Subject and Authority Key Identifiers, and the first action must be `c2pa.created` with a `digitalSourceType`.
 - **`pip install` needs `PYTHONUTF8=1` on this machine.** One dependency's `setup.py` reads a file as cp1252 and dies otherwise.
 - **`npm run bundle` before building the wheel.** The web app is gitignored inside the package and is included only via hatch `artifacts`. A git install without it serves an error telling you so.
+- **The ledger holds four files per serial.** Only `<10 hex>.json` is a seal record; `ledger.entries()` matches that pattern, because `<serial>.receipt.json` sits beside it.
 - `python -m pytest` needs the repo venv (`.venv`, created with `--system-site-packages` to reuse the installed torch). Tests fake the watermark and the timestamp authority; `python/tests/fixtures/digicert-probe.tsr` is a real token over SHA-256("sponsorable api probe") for offline token tests.
 
 ## Calibration
