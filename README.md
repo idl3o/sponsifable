@@ -14,7 +14,11 @@ MIT licensed. No account, no server, no telemetry. Built for a creator who runs 
 
 **Refuses to price your labour like an impression.** A dedicated video takes a day and a half whoever makes it. Cost-per-impression pricing alone tells a creator with a small audience to do that for thirty pounds. Every format carries a production floor derived from the hours it costs, and the price is the greater of the two. When the floor binds, the interface says so and shows both numbers.
 
-**Prices the terms, not just the placement.** Most creators quote one figure for a video and hand over usage rights and category exclusivity for nothing. Those are separate things a sponsor is buying. A full buyout costs nearly twice organic-only here, because it is a media licence rather than a post.
+**Prices the terms, not just the placement.** Most creators quote one figure for a video and hand over usage rights and category exclusivity for nothing. Those are separate things a sponsor is buying. Paid usage is priced per 30-day period, with a minimum however small your audience, because the sponsor's paid reach does not shrink with it. If the sponsor tells you their ad budget, the fee scales with that too. A full buyout is priced as the placement again: a media licence, not a post.
+
+**Shows what the market actually pays.** For Instagram and TikTok, every line carries what creators your size are typically paid, from a study of 15,047 verified paid deals. The card prices on views and the market pays on followers, so if your followers outrun your views, you will see that you can ask for more. It is a reference beside the price, never an input to it.
+
+**Names the one discount worth giving.** A creator with no results on record can offer an introductory rate: a named, one-off concession, in exchange for permission to publish the campaign's results. The pitch says so. It lapses the moment your first result is recorded, because by then you have what it was buying.
 
 **Builds a media kit that survives scrutiny.** It leads with impressions per placement rather than summed follower counts, because summing followers across five platforms counts the same person five times and every experienced sponsor knows it. It also lists the problems a sponsor will notice, so you name them first.
 
@@ -24,7 +28,7 @@ MIT licensed. No account, no server, no telemetry. Built for a creator who runs 
 
 **Keeps a deal log.** Every outcome, won or lost, is recorded against the price the card quoted, with the audience and terms frozen as they stood. It tells you whether you are being negotiated down, and whether the fit score predicts anything for you. If you choose to, one button opens the project's rate-data form with the deal filled in, rounded so it cannot identify you. Lost deals count too: they are the half of the market no rate survey ever sees.
 
-**Seals what you deliver, if you ask it to.** A sponsor who keeps your whitelisted ad running on day 90 has bought the ninety-day licence at the thirty-day price. `sponsorable seal` watermarks the file before delivery, signs a licence receipt, and has it timestamped. If the ad later turns up in a public ad library, `sponsorable verify` checks it, and the app prices the overrun as the tier the sponsor actually used. It is opt-in per deal, and it cannot be applied after delivery: the evidence, not the app, enforces that. Receipts are signed with your own SSH key, so a sponsor can check one with `ssh-keygen`, which is already on their machine. [docs/provenance.md](https://github.com/idl3o/sponsorable/blob/main/docs/provenance.md) explains how, and what it cannot do.
+**Seals what you deliver, if you ask it to.** A sponsor who keeps your whitelisted ad running on day 90 has bought the ninety-day licence at the thirty-day price. `sponsorable seal` watermarks the file before delivery, signs a licence receipt, and has it timestamped. If the ad later turns up in a public ad library, `sponsorable verify` checks it, and the app prices the overrun as the further 30-day periods the sponsor took. It is opt-in per deal, and it cannot be applied after delivery: the evidence, not the app, enforces that. Receipts are signed with your own SSH key, so a sponsor can check one with `ssh-keygen`, which is already on their machine. [docs/provenance.md](https://github.com/idl3o/sponsorable/blob/main/docs/provenance.md) explains how, and what it cannot do.
 
 ---
 
@@ -101,7 +105,7 @@ For development:
 
 ```bash
 npm run dev        # http://localhost:5180
-npm test           # 99 tests, including the calibration sweep
+npm test           # 114 tests, including the calibration sweep
 npm run typecheck
 python -m pytest   # 43 tests: receipts, SSH signatures, timestamps, seal and verify
 

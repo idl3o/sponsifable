@@ -73,7 +73,7 @@ The receipt tells the sponsor that the file carries a watermark and what terms i
 
 `sponsorable verify` takes an ad file downloaded from a public ad library and the date the library says it started running. It decodes the serial, finds the receipt, checks the signature, the timestamp and the ordering, and reports the facts: which deal, which terms, how many days of paid running were permitted, and how many the sighting shows.
 
-It does not price the overrun. Every market assumption lives in `src/domain/benchmarks.ts`, so the extension invoice is composed in the web app from the verified facts, by pricing the deal again at the usage tier the sponsor actually consumed and charging the difference.
+It does not price the overrun. Every market assumption lives in `src/domain/benchmarks.ts`, so the extension invoice is composed in the web app from the verified facts. Paid usage is sold by the 30-day period, so the overrun is the further periods the sponsor took, each at the per-period rate the licence was priced on, scaled by the discount already negotiated and never below the per-period minimum.
 
 ## Survival
 
