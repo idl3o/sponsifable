@@ -4,3 +4,11 @@ dist
 *.local
 
 playtest-shots
+
+# Python side
+.venv
+__pycache__
+.pytest_cache
+*.egg-info
+/python/sponsorable/web
+/python/dist

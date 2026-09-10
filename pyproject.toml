@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sponsorable"
+version = "0.2.0"
+description = "Price, prove and pitch a creator sponsorship, and seal what you deliver. Local-first, no account, no telemetry."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Sam Lavington" }]
+requires-python = ">=3.10"
+dependencies = [
+  "pillow>=10",
+  "cryptography>=42",
+  "rfc3161ng>=2.1",
+  "imagehash>=4.3",
+  "c2pa-python>=0.37",
+]
+
+[project.optional-dependencies]
+# TrustMark pulls in PyTorch, several hundred megabytes. Serving the app and
+# verifying receipts do not need it; sealing and decoding a watermark do.
+seal = ["trustmark>=0.9"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+sponsorable = "sponsorable.cli:main"
+
+[project.urls]
+Repository = "https://github.com/idl3o/sponsorable"
+
+[tool.hatch.build.targets.wheel]
+packages = ["python/sponsorable"]
+# The built web app is gitignored, so it has to be named to be included.
+artifacts = ["python/sponsorable/web/**"]
+
+[tool.hatch.build.targets.sdist]
+include = ["python/sponsorable", "README.md", "LICENSE"]
+artifacts = ["python/sponsorable/web/**"]
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
+pythonpath = ["python"]
