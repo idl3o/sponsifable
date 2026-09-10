@@ -1,15 +1,29 @@
 [build-system]
-requires = ["hatchling>=1.24"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
 name = "sponsorable"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Price, prove and pitch a creator sponsorship, and seal what you deliver. Local-first, no account, no telemetry."
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Sam Lavington" }]
 requires-python = ">=3.10"
+keywords = ["creator-economy", "sponsorship", "rate-card", "media-kit", "c2pa", "watermark", "local-first"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Environment :: Web Environment",
+  "Intended Audience :: End Users/Desktop",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Multimedia :: Graphics",
+  "Topic :: Office/Business :: Financial",
+  "Topic :: Security :: Cryptography",
+]
 dependencies = [
   "pillow>=10",
   "cryptography>=42",
@@ -20,15 +34,23 @@ dependencies = [
 
 [project.optional-dependencies]
 # TrustMark pulls in PyTorch, several hundred megabytes. Serving the app and
-# verifying receipts do not need it; sealing and decoding a watermark do.
-seal = ["trustmark>=0.9"]
+# checking receipts do not need it; sealing and decoding a watermark do.
+seal = ["trustmark>=0.9.2"]
 dev = ["pytest>=8"]
 
 [project.scripts]
 sponsorable = "sponsorable.cli:main"
 
 [project.urls]
-Repository = "https://github.com/idl3o/sponsorable"
+Homepage = "https://github.com/idl3o/sponsorable"
+Documentation = "https://github.com/idl3o/sponsorable/blob/main/docs/provenance.md"
+Issues = "https://github.com/idl3o/sponsorable/issues"
+Source = "https://github.com/idl3o/sponsorable"
+
+# One version, in one place: the tag, the package and `sponsorable --version`
+# cannot disagree. The release workflow refuses a tag that does not match.
+[tool.hatch.version]
+path = "python/sponsorable/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["python/sponsorable"]
@@ -36,7 +58,7 @@ packages = ["python/sponsorable"]
 artifacts = ["python/sponsorable/web/**"]
 
 [tool.hatch.build.targets.sdist]
-include = ["python/sponsorable", "README.md", "LICENSE"]
+include = ["python/sponsorable", "python/tests", "README.md", "LICENSE"]
 artifacts = ["python/sponsorable/web/**"]
 
 [tool.pytest.ini_options]

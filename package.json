@@ -1,7 +1,7 @@
 {
   "name": "sponsorable",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Work out what to charge a sponsor, prove the audience, send the pitch, track the pipeline. Local-first, no account, no telemetry.",
   "scripts": {

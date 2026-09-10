@@ -1,0 +1,96 @@
+# Build, test and publish the `sponsorable` package with PyPI Trusted
+# Publishing: GitHub proves to PyPI, over OIDC, that this workflow in this
+# repository made the upload, so no API token exists to leak. PyPI attaches a
+# Sigstore-signed attestation to every file it receives this way.
+#
+#   Run manually (Actions > release > Run workflow)  ->  TestPyPI only
+#   Push a tag vX.Y.Z matching the package version   ->  TestPyPI, then PyPI
+#
+# The `pypi` environment should require your approval in the repository
+# settings, so no tag can publish without a click. See docs/RELEASING.md.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run bundle
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip build twine
+      - run: python -m pip install . pytest
+      - run: python -m pytest
+
+      - name: Tag, package and app versions agree
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          py=$(python -c "import re,pathlib;print(re.search(r'__version__ = \"(.+)\"', pathlib.Path('python/sponsorable/__init__.py').read_text()).group(1))")
+          js=$(node -p "require('./package.json').version")
+          echo "tag $tag, python $py, app $js"
+          test "$tag" = "$py" && test "$tag" = "$js"
+
+      - run: python -m build
+      - run: python -m twine check --strict dist/*
+      - name: The wheel carries the app
+        run: python -m zipfile -l dist/*.whl | grep -q "sponsorable/web/index.html"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  testpypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/sponsorable
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          # A manual run may already have put this version on TestPyPI.
+          skip-existing: true
+
+  pypi:
+    needs: testpypi
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/sponsorable
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

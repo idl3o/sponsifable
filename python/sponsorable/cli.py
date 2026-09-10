@@ -16,7 +16,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from . import keys, ledger, manifest, sshsig
+from . import __version__, keys, ledger, manifest, sshsig
 from .timestamp import DEFAULT_TSA
 
 
@@ -29,6 +29,7 @@ def _iso(value: str) -> date:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="sponsorable", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--version", action="version", version=f"sponsorable {__version__}")
     sub = parser.add_subparsers(dest="command")
 
     serve = sub.add_parser("serve", help="serve the app on 127.0.0.1 (the default)")
