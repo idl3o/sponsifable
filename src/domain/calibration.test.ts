@@ -98,10 +98,10 @@ const ARCHETYPES: Archetype[] = [
     medianViews: 2_000,
     engagementRate: 0.05,
     geo: { tier1: 70, tier2: 20, tier3: 10 },
-    // Wide at the bottom on purpose. A newsletter slot is scarce as well as
-    // laborious, and scarcity is not modelled, so the floor here is a
-    // walk-away number rather than what the creator should actually ask.
-    expect: [200, 900],
+    // Was 200–900, a guess. Paved's marketplace data puts a 5k-subscriber
+    // primary slot at $125–250 (about £94–188) and finds no premium for
+    // scarcity; B2B earns the top of that. See docs/research.
+    expect: [90, 400],
   },
   {
     name: 'Established tech podcast',

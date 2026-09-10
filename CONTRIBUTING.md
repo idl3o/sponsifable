@@ -32,7 +32,7 @@ Run the suite. It is fast.
 
 ```bash
 npm install
-npm test           # 99 tests
+npm test           # 114 tests
 npm run typecheck
 node scripts/playtest.mjs
 python -m pytest   # 43 tests, if you touch python/
@@ -79,7 +79,9 @@ Say what changed and what it does to the numbers. If you touched pricing, paste 
 ## 3. Things that would genuinely help, beyond rates
 
 - **Currencies other than GBP.** Everything is hard-coded to sterling right now. This is a real limitation for most of the world.
-- **The newsletter scarcity problem.** A newsletter slot is scarce as well as laborious, and only the labour is priced, so those floors sit too low. Modelling scarcity properly needs an argument, not just a bigger constant.
+- **Evidence for the social CPMs.** No primary per-view data for YouTube, TikTok or Instagram was found in September 2026; every figure traced back to listicles. The only validated social number is the paid-market curve, which is per deliverable by follower count. Real per-view data would settle it.
+- **Usage-fee evidence.** The per-period share and minimum rest on guides, not transactions. Paid whitelisting or usage fees, with the sponsor's spend if you know it, would put them on firmer ground.
+- **Newsletter scarcity, the other way round.** This file used to say newsletter floors were too low because scarcity is not priced. Paved's marketplace data shows small-list slots priced per subscriber with no scarcity premium, so the floors came down instead. If you have been paid a premium for scarcity, that is the data point that would reverse it.
 - **Accessibility.** The play test checks tap targets and overflow. It does not check screen reader behaviour, focus order or contrast ratios, and nobody has audited those.
 - **Translations of the pitch templates.** The composition logic is language-agnostic; the strings are not.
 

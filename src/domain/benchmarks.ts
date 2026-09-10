@@ -22,8 +22,12 @@ const CPM_BANDS: Record<Platform, Partial<Record<Format, number>>> = {
   instagram: { reel: 11, post: 9, story: 6 },
   twitch: { stream: 12, mention: 6 },
   x: { post: 5, mention: 3 },
+  // £55 per thousand opens is about £25 per thousand subscribers at a 45%
+  // open rate, inside Paved's marketplace range of $25–50 (research).
   newsletter: { 'primary-slot': 55, classified: 18, mention: 12 },
-  podcast: { 'episode-read': 26, mention: 14 },
+  // Was 26. AdvertiseCast's 2024 sales average for a 60s host read is
+  // £16–17 (paid, high reliability); 19 leaves room for a niche premium.
+  podcast: { 'episode-read': 19, mention: 14 },
 };
 
 /** Formats each platform can legitimately sell. */
@@ -93,7 +97,10 @@ export const MEDIAN_ENGAGEMENT: Record<Platform, number> = {
  * number, the correct answer is no.
  */
 export const PRODUCTION_FLOOR: Record<Format, number> = {
-  // A full video is a day and a half of work whoever is making it.
+  // A full video is a day and a half of work whoever is making it. This sits
+  // at the top of SevenSix's UK asking band for 1–5k subscribers and 2.3x
+  // Collabstr's paid YouTube average (research). That is deliberate: it is a
+  // walk-away number for a day and a half of labour, not a market price.
   dedicated: 450,
   // Script, shoot, edit and brief compliance on a 60-90 second segment.
   integration: 200,
@@ -108,11 +115,14 @@ export const PRODUCTION_FLOOR: Record<Format, number> = {
   mention: 60,
   // A live read needs prep, and commits the stream to a sponsor.
   stream: 120,
-  // Writing a sponsored section well, in one of only a few slots a month.
-  'primary-slot': 200,
+  // Was 200. Writing a sponsored section is a few hours. Paved prices a
+  // 3k-subscriber slot at $75–150 and found no premium for scarcity (research).
+  'primary-slot': 100,
+  // Secondary slots sell at 50–65% of the primary (Paved).
   classified: 60,
-  // Prep, read and admin on a host-read spot.
-  'episode-read': 150,
+  // Was 150, which needed about 5,800 downloads to clear at the old CPM.
+  // Prep, read and admin on a host-read spot is under two hours.
+  'episode-read': 60,
 };
 
 /** Uplift for granting a sponsor category exclusivity for a window. */
