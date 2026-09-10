@@ -14,7 +14,9 @@ from pathlib import Path
 from typing import Any
 
 #: The newest workspace format this CLI understands. Mirrors WORKSPACE_VERSION.
-SUPPORTED_VERSION = 2
+SUPPORTED_VERSION = 3
+#: The first format with a deal log, which is all the CLI reads.
+FIRST_WITH_DEALS = 2
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -22,7 +24,7 @@ def load(path: Path) -> dict[str, Any]:
     version = data.get("version", 1)
     if version > SUPPORTED_VERSION:
         raise ValueError(f"{path} is workspace format {version}; this CLI understands up to {SUPPORTED_VERSION}")
-    if version < SUPPORTED_VERSION:
+    if version < FIRST_WITH_DEALS:
         raise ValueError(f"{path} predates the deal log. Import it into the app and export it again")
     return data
 

@@ -51,6 +51,12 @@ function priceSentence(ask: RateLine): string {
   const platform = PLATFORM_LABEL[ask.platform];
   const views = ask.effectiveImpressions.toLocaleString('en-GB');
 
+  // An introductory price is a trade, and is named as one: saying it "does
+  // not scale down further" would be untrue of a price already set below cost.
+  if (ask.introductory) {
+    return `I have a ${format} on ${platform} available at ${gbp(ask.target)}, against ${views} median views. That is an introductory rate, in exchange for permission to share the campaign's results as a case study.`;
+  }
+
   if (ask.flooredByProduction) {
     return `I have a ${format} on ${platform} available at ${gbp(ask.target)}, against ${views} median views. At this size the price reflects what the piece costs to make properly rather than a reach calculation, so it does not scale down further.`;
   }

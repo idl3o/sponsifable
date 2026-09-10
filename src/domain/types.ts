@@ -104,6 +104,17 @@ export interface DealTerms {
   rush: boolean;
   /** Number of assets bought together; volume earns a discount. */
   bundleSize: number;
+  /**
+   * The sponsor's declared paid spend behind the asset, GBP. Zero when not
+   * declared. When known, paid usage is priced against it as well as against
+   * the placement, because that spend is what the usage is worth to them.
+   */
+  declaredSpend: number;
+  /**
+   * Offer the introductory rate. Honoured only while the creator has no
+   * results on record; after the first, it lapses whatever this says.
+   */
+  introductory: boolean;
 }
 
 export type UsageRights =
@@ -142,6 +153,24 @@ export interface RateLine {
   floor: number;
   /** Opening ask when the sponsor is large or the brief is demanding. */
   stretch: number;
+  /** True when the introductory rate is applied to this line. */
+  introductory: boolean;
+  /** What creators of this size are typically paid, where evidence exists. */
+  market: MarketReference | null;
+}
+
+/**
+ * What the paid market pays a creator of this size for this kind of
+ * deliverable. A reference beside the price, never an input to it.
+ */
+export interface MarketReference {
+  /** Typical pay per deliverable, GBP, rounded. */
+  typical: number;
+  followers: number;
+  /** Whether the card's organic price sits below, near or above it. */
+  position: 'below' | 'in-line' | 'above';
+  /** One sentence the creator can use, naming the source. */
+  sentence: string;
 }
 
 export interface Adjustment {

@@ -8,6 +8,10 @@ import type { Format, Niche, Platform, UsageRights } from './types';
  * the app treats every one of them as an editable assumption rather than a
  * fact. The value of the engine is that the derivation is explicit: change a
  * band here and every price downstream moves for a stated reason.
+ *
+ * Evidence for the September 2026 revisions, with every figure marked asking
+ * or paid, is in docs/research/new-creator-economics-2026-09.md ("research"
+ * below). The social CPMs could not be validated against any primary data.
  */
 
 /** Base cost per thousand impressions, GBP, assuming a tier-1 audience. */
@@ -120,13 +124,72 @@ export const EXCLUSIVITY_UPLIFT: Record<number, number> = {
   180: 1.4,
 };
 
-/** Uplift for what the sponsor may do with the asset after delivery. */
-export const USAGE_UPLIFT: Record<UsageRights, number> = {
-  'organic-only': 1.0,
-  'whitelisting-30': 1.25,
-  'whitelisting-90': 1.45,
-  'full-buyout': 1.9,
-};
+/**
+ * Paid usage, priced per 30-day period rather than as a one-off uplift.
+ *
+ * Whitelisting and usage are conventionally charged as a share of the base
+ * fee for each 30 days (20–30% in the guides; asking figures only, low
+ * reliability). A share alone underprices small creators, because the value
+ * of paid usage comes from the sponsor's spend, which does not shrink with
+ * the creator's audience. Hence the minimum per period. The only structures
+ * found that scale usage with the buyer's reach are Equity's UseFee and
+ * SevenSix's formula (research).
+ */
+export const PAID_USAGE = {
+  /** Share of the organic price charged for each period of paid usage. */
+  sharePerPeriod: 0.25,
+  /** The least one period of paid usage costs, whatever the audience, GBP. */
+  minimumPerPeriod: 75,
+  /** Days in a period. */
+  periodDays: 30,
+  /**
+   * Share of the sponsor's declared paid spend behind the asset. The one
+   * example found is 4% (Lumanu/Collectively survey): a parameter, not a
+   * benchmark. Applied only when the sponsor has declared a budget.
+   */
+  shareOfDeclaredSpend: 0.04,
+} as const;
+
+/**
+ * A full buyout: the placement priced again as a media licence, and never
+ * below this many periods of paid usage at the minimum. Influencer guides
+ * ask 3–4x; UGC marketplaces bundle rights at close to 1x (research).
+ */
+export const BUYOUT = { shareOfOrganic: 1.0, minimumPeriods: 6 } as const;
+
+/**
+ * What creators are actually paid per deliverable, by follower count.
+ *
+ * Smith (2026), Influencer Dynamics: log pay on log followers across 15,047
+ * verified, accepted deals reported on FYPM, coefficient 0.489 (s.e. 0.006),
+ * R² 0.33; $145 per deliverable at 10,000 followers. Paid prices, high
+ * reliability, checked against the paper. Mostly Instagram and TikTok, so it
+ * is offered only for those platforms' main formats.
+ *
+ * It is a reference beside the price, never an input to it. The card prices
+ * on views; the market pays on followers. Showing both lets a creator whose
+ * followers outrun their views ask for what the market actually pays.
+ */
+export const MARKET_PAY = {
+  usdAt10kFollowers: 145,
+  elasticity: 0.489,
+  usdPerGbp: 1.33,
+  deals: 15_047,
+  citation: 'Smith 2026, 15,047 paid deals',
+  /** Within this share either side, a price is described as in line with the market. */
+  inLineTolerance: 0.15,
+  platforms: ['instagram', 'tiktok'] as readonly Platform[],
+  formats: ['reel', 'post', 'short'] as readonly Format[],
+} as const;
+
+/**
+ * The introductory rate: a named, capped concession for a creator with no
+ * results on record. New creators rationally accept deals below the cost of
+ * the work, because a first proof point is worth more than the fee. This
+ * makes that trade explicit, once, in exchange for permission to publish the
+ * campaign's results, rather than letting it happen as a quiet discount.
+ */
+export const INTRODUCTORY_RATE = { factor: 0.7 } as const;
 
 /**
  * Days of paid running each usage tier permits, counted from the first paid

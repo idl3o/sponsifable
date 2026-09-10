@@ -1,6 +1,8 @@
-import { FORMAT_LABEL, NICHE_LABEL, PAID_USAGE_DAYS, PLATFORM_LABEL } from './benchmarks';
+import { FORMAT_LABEL, NICHE_LABEL, PAID_USAGE, PAID_USAGE_DAYS, PLATFORM_LABEL } from './benchmarks';
 import { daysBetween, gbp } from './pitch';
-import { hasGeo, normaliseGeo, priceLine, roundToNegotiable } from './pricing';
+import { hasGeo, normaliseGeo, periodFee, priceLine, roundHard, roundToNegotiable } from './pricing';
+
+export { roundHard };
 import { verdictFor } from './scoring';
 import type {
   CreatorProfile,
@@ -158,13 +160,6 @@ export function calibrate(deals: Deal[]): Calibration {
   };
 }
 
-/** Round to two significant figures, so a submission cannot fingerprint a channel. */
-export function roundHard(n: number): number {
-  if (n <= 0) return 0;
-  const magnitude = 10 ** Math.max(0, Math.floor(Math.log10(n)) - 1);
-  return Math.round(n / magnitude) * magnitude;
-}
-
 /** "Q3 2026" from an ISO date. */
 export function quarterOf(iso: string): string {
   const [year, month] = iso.split('-').map(Number);
@@ -217,22 +212,16 @@ export function rateSubmissionUrl(deal: Deal): string | null {
   return `${REPO_URL}/issues/new?${params.toString()}`;
 }
 
-/** Usage tiers in ascending order of paid days permitted. */
-const TIER_ORDER: UsageRights[] = ['organic-only', 'whitelisting-30', 'whitelisting-90', 'full-buyout'];
-
-/** The cheapest tier that would have covered a run of this many paid days. */
-export function tierCovering(days: number): UsageRights {
-  return TIER_ORDER.find((tier) => PAID_USAGE_DAYS[tier] >= days) ?? 'full-buyout';
-}
-
 export interface Overrun {
   /** Days of paid running the sighting shows. */
   daysRun: number;
   /** Days of paid running the licence permitted. Infinity for a buyout. */
   permitted: number;
-  /** The tier the sponsor actually consumed. */
-  consumed: UsageRights;
-  /** What is owed, in GBP, rounded to a negotiable increment. Zero when within terms. */
+  /** Further periods of paid usage the sponsor took beyond the licence. */
+  periodsOver: number;
+  /** What each further period costs, GBP, at the rate already agreed. */
+  perPeriod: number;
+  /** What is owed, in GBP. Zero when within terms. */
   owed: number;
   /** The email paragraph that asks for it. Empty when within terms. */
   sentence: string;
@@ -269,37 +258,56 @@ function longDate(iso: string): string {
 }
 
 /**
+ * What one further period of paid usage costs on this deal: the same
+ * per-period fee that priced the licence, on the organic price as it stood at
+ * close, scaled by the discount the sponsor already negotiated, and never
+ * below the minimum. Where the sponsor declared a spend, its per-period share
+ * counts too.
+ */
+function overrunPeriodRate(deal: Deal, permitted: number): number {
+  const discount = deal.quoted > 0 ? deal.agreed / deal.quoted : 1;
+  const organic = repriceAt(deal, 'organic-only');
+  const grantedPeriods = permitted / PAID_USAGE.periodDays;
+  const spendRate =
+    deal.terms.declaredSpend > 0 && grantedPeriods > 0
+      ? (PAID_USAGE.shareOfDeclaredSpend * deal.terms.declaredSpend) / grantedPeriods
+      : 0;
+  const rate = Math.max(periodFee(organic), spendRate) * discount;
+  return roundToNegotiable(Math.max(rate, PAID_USAGE.minimumPerPeriod));
+}
+
+/**
  * Price a sponsor running an asset beyond its licence.
  *
- * The overrun is priced as the tier the sponsor actually consumed, less the
- * tier they bought, scaled by the discount they had already negotiated. That is
- * the defensible number: it is what they would have paid had they asked, on
- * the terms they had already accepted. Market assumptions come from the same
+ * Paid usage is sold by the period, so an overrun is priced as the further
+ * periods the sponsor took, at the per-period rate the licence was priced on.
+ * That is the defensible number: what they would have paid had they asked, on
+ * terms they had already accepted. Market assumptions come from the same
  * benchmarks that priced the deal, applied to the audience as it was when the
  * deal closed.
  */
 export function priceOverrun(deal: Deal, sighting: Sighting): Overrun {
   const daysRun = Math.max(0, daysBetween(sighting.startedOn, sighting.seenOn));
   const permitted = deal.paidUsageDays ?? Number.POSITIVE_INFINITY;
-  const consumed = tierCovering(daysRun);
 
   if (daysRun <= permitted || deal.outcome !== 'won') {
-    return { daysRun, permitted, consumed, owed: 0, sentence: '' };
+    return { daysRun, permitted, periodsOver: 0, perPeriod: 0, owed: 0, sentence: '' };
   }
 
-  const discount = deal.quoted > 0 ? deal.agreed / deal.quoted : 1;
-  const gap = repriceAt(deal, consumed) - repriceAt(deal, deal.terms.usageRights);
-  const owed = roundToNegotiable(Math.max(0, gap * discount));
+  const periodsOver = Math.ceil((daysRun - permitted) / PAID_USAGE.periodDays);
+  const perPeriod = overrunPeriodRate(deal, permitted);
+  const owed = perPeriod * periodsOver;
 
   const granted =
     permitted === 0 ? 'organic use on my channel only, with no paid running' : `${permitted} days of paid usage from the first paid run`;
-  const covering = consumed === 'full-buyout' ? 'a full buyout' : `the ${PAID_USAGE_DAYS[consumed]}-day licence`;
+  const periods = `${periodsOver} further ${PAID_USAGE.periodDays}-day period${periodsOver === 1 ? '' : 's'} of paid usage`;
 
   return {
     daysRun,
     permitted,
-    consumed,
+    periodsOver,
+    perPeriod,
     owed,
-    sentence: `Our agreement covered ${granted}. The ad started running on ${longDate(sighting.startedOn)} and was still live on ${longDate(sighting.seenOn)}, ${daysRun} days in all. That is ${covering}, and at the rate we already agreed the difference is ${gbp(owed)}. I will send an invoice for it.`,
+    sentence: `Our agreement covered ${granted}. The ad started running on ${longDate(sighting.startedOn)} and was still live on ${longDate(sighting.seenOn)}, ${daysRun} days in all, which is ${periods}. At the rate we agreed, that is ${gbp(perPeriod)} a period and ${gbp(owed)} in total. I will send an invoice for it.`,
   };
 }

@@ -6,8 +6,8 @@ import {
   quarterOf,
   rateSubmissionUrl,
   roundHard,
-  tierCovering,
 } from './deals';
+import { PAID_USAGE } from './benchmarks';
 import { DEFAULT_TERMS, priceLine } from './pricing';
 import type { Channel, CreatorProfile, Deal, Prospect } from './types';
 
@@ -160,14 +160,27 @@ describe('priceOverrun', () => {
     expect(priceOverrun(won(line.target), sighting).owed).toBe(0);
   });
 
-  it('prices a run past thirty days as the ninety-day licence, less what was paid', () => {
+  it('prices each further thirty days of paid running as a period', () => {
     const late = { ...sighting, seenOn: '2026-12-15' };
     const overrun = priceOverrun(won(line.target), late);
     expect(overrun.daysRun).toBe(75);
-    expect(overrun.consumed).toBe('whitelisting-90');
-    expect(overrun.owed).toBeGreaterThan(0);
+    expect(overrun.periodsOver).toBe(2);
+    expect(overrun.owed).toBe(overrun.perPeriod * 2);
     expect(overrun.sentence).toContain('75 days');
-    expect(overrun.sentence).toContain('90-day licence');
+    expect(overrun.sentence).toContain('2 further 30-day periods');
+  });
+
+  it('never prices a period below the minimum, however small the channel', () => {
+    const tiny = won(10, { quoted: 60, medianViews: 300, followers: 900 });
+    const overrun = priceOverrun(tiny, { ...sighting, seenOn: '2026-11-15' });
+    expect(overrun.perPeriod).toBeGreaterThanOrEqual(PAID_USAGE.minimumPerPeriod);
+  });
+
+  it("scales with the sponsor's declared spend when that is larger", () => {
+    const late = { ...sighting, seenOn: '2026-12-15' };
+    const plain = priceOverrun(won(line.target), late).perPeriod;
+    const bigSpend = won(line.target, { terms: { ...whitelisted, declaredSpend: 200_000 } });
+    expect(priceOverrun(bigSpend, late).perPeriod).toBeGreaterThan(plain);
   });
 
   it('applies the discount the sponsor already negotiated', () => {
@@ -197,12 +210,5 @@ describe('priceOverrun', () => {
     const generous = won(line.target, { paidUsageDays: 60 });
     expect(priceOverrun(generous, { ...sighting, seenOn: '2026-11-25' }).owed).toBe(0);
     expect(won(line.target).paidUsageDays).toBe(30);
-  });
-
-  it('picks the cheapest tier that covers the run', () => {
-    expect(tierCovering(0)).toBe('organic-only');
-    expect(tierCovering(30)).toBe('whitelisting-30');
-    expect(tierCovering(31)).toBe('whitelisting-90');
-    expect(tierCovering(400)).toBe('full-buyout');
   });
 });

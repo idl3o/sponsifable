@@ -27,8 +27,11 @@ import type {
  * whole or is refused with a reason. It never loads half.
  */
 
-/** Bump when the shape changes, and teach `parseWorkspace` the old shape. */
-export const WORKSPACE_VERSION = 2;
+/**
+ * Bump when the shape changes, and teach `parseWorkspace` the old shape.
+ * 1: first release. 2: the deal log. 3: declared spend and the introductory rate.
+ */
+export const WORKSPACE_VERSION = 3;
 
 export interface Workspace {
   version: number;
@@ -161,6 +164,8 @@ function parseTerms(value: unknown, path: string): DealTerms {
     revisions: num(o.revisions, `${path}.revisions`, 1),
     rush: bool(o.rush, `${path}.rush`, false),
     bundleSize: num(o.bundleSize, `${path}.bundleSize`, 1),
+    declaredSpend: Math.max(0, num(o.declaredSpend, `${path}.declaredSpend`, 0)),
+    introductory: bool(o.introductory, `${path}.introductory`, false),
   };
 }
 

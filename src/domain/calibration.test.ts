@@ -174,6 +174,7 @@ describe('calibration sweep', () => {
       const [low, high] = archetype.expect;
       const inRange = line.target >= low && line.target <= high;
 
+      const market = line.market ? `paid ~£${line.market.typical} (${(line.target / line.market.typical).toFixed(1)}x)` : '';
       rows.push(
         [
           archetype.name.padEnd(30),
@@ -183,7 +184,8 @@ describe('calibration sweep', () => {
           (line.flooredByProduction ? 'on time' : `£${effectiveCpm(line).toFixed(2)} CPM`).padStart(
             13,
           ),
-          inRange ? 'ok' : `OUT (expected £${low}–£${high})`,
+          (inRange ? 'ok' : `OUT (expected £${low}–£${high})`).padEnd(4),
+          market,
         ].join('  '),
       );
 
@@ -198,6 +200,23 @@ describe('calibration sweep', () => {
     console.log(`\n${rows.join('\n')}\n`);
 
     expect(failures).toEqual([]);
+  });
+
+  /**
+   * The ranges above were written by the same hand as the benchmarks, which is
+   * circular. This is the outside anchor: Smith's curve over 15,047 paid deals.
+   * SevenSix's UK asking prices sit about 3x above it, so a card more than 3x
+   * off in either direction has left the market, not merely negotiated it.
+   */
+  it('stays within 3x of what the paid market pays, where the evidence covers it', () => {
+    const outliers: string[] = [];
+    for (const archetype of ARCHETYPES) {
+      const [line] = buildRateCard(profileFor(archetype), DEFAULT_TERMS);
+      if (!line?.market) continue;
+      const ratio = line.target / line.market.typical;
+      if (ratio > 3 || ratio < 1 / 3) outliers.push(`${archetype.name}: ${ratio.toFixed(2)}x`);
+    }
+    expect(outliers).toEqual([]);
   });
 
   it('never prices a placement below the cost of making it', () => {

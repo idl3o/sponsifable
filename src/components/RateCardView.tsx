@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { FORMAT_LABEL, PLATFORM_LABEL } from '../domain/benchmarks';
-import { buildRateCard, effectiveCpm, rateCardTotal } from '../domain/pricing';
+import { FORMAT_LABEL, INTRODUCTORY_RATE, PLATFORM_LABEL } from '../domain/benchmarks';
+import { buildRateCard, effectiveCpm, hasResults, rateCardTotal } from '../domain/pricing';
 import type { RateLine, UsageRights } from '../domain/types';
 import { useStore } from '../store/useStore';
-import { Button, Card, Pill, SelectField, Stat, count, money } from './ui/Primitives';
+import { Button, Card, NumberField, Pill, SelectField, Stat, count, money } from './ui/Primitives';
 
 const USAGE_OPTIONS: Array<{ value: UsageRights; label: string }> = [
   { value: 'organic-only', label: 'Organic only, my channel' },
@@ -24,6 +24,7 @@ const EXCLUSIVITY_OPTIONS = [
 function TermsPanel() {
   const terms = useStore((s) => s.terms);
   const setTerms = useStore((s) => s.setTerms);
+  const proven = useStore((s) => hasResults(s.profile));
 
   return (
     <Card
@@ -35,7 +36,32 @@ function TermsPanel() {
         value={terms.usageRights}
         options={USAGE_OPTIONS}
         onChange={(usageRights) => setTerms({ usageRights })}
-        hint="If the sponsor can run paid spend behind your face, they are buying media, not a post."
+        hint="If the sponsor can run paid spend behind your face, they are buying media, not a post. Paid usage is priced per 30 days, with a minimum however small your audience."
+      />
+
+      {terms.usageRights !== 'organic-only' && (
+        <NumberField
+          label="Sponsor's declared paid spend, GBP"
+          value={terms.declaredSpend}
+          onChange={(declaredSpend) => setTerms({ declaredSpend: Math.max(0, declaredSpend) })}
+          step={500}
+          hint="Ask what they plan to spend behind the asset. If they say, the fee scales with it; if not, leave it at nought."
+        />
+      )}
+
+      <SelectField
+        label="Introductory rate"
+        value={terms.introductory && !proven ? 'on' : 'off'}
+        options={[
+          { value: 'off', label: 'Standard rates' },
+          { value: 'on', label: 'Introductory, until my first result' },
+        ]}
+        onChange={(value) => setTerms({ introductory: value === 'on' })}
+        hint={
+          proven
+            ? 'You have a result on record, so the introductory rate no longer applies.'
+            : `Once, knowingly: ${Math.round((1 - INTRODUCTORY_RATE.factor) * 100)}% off in exchange for permission to publish the results. Your first result is worth more than the fee.`
+        }
       />
 
       <SelectField
@@ -76,6 +102,17 @@ function TermsPanel() {
   );
 }
 
+/** What the cost of the work means for this line, in one speakable paragraph. */
+function floorExplanation(line: RateLine): string {
+  if (line.introductory) {
+    return 'Deliberately below the cost of the work, once. You are buying your first published result with the difference, and the rate ends as soon as that result is on record.';
+  }
+  if (line.flooredByProduction) {
+    return 'This is what sets your price. The work takes the same hours whoever is watching, so reach-based pricing would have you make this for less than it costs you. Below this number the correct answer to a sponsor is no.';
+  }
+  return 'The least this could sell for and still be worth making. Your audience clears it comfortably.';
+}
+
 /** One priced line, expandable into its full derivation. */
 function RateRow({ line }: { line: RateLine }) {
   const [open, setOpen] = useState(false);
@@ -90,6 +127,10 @@ function RateRow({ line }: { line: RateLine }) {
           <div className="row" style={{ gap: 7 }}>
             <span style={{ fontWeight: 560 }}>{FORMAT_LABEL[line.format]}</span>
             {line.flooredByProduction && <Pill tone="warn">priced on your time</Pill>}
+            {line.introductory && <Pill tone="accent">introductory</Pill>}
+            {line.market?.position === 'below' && (
+              <Pill tone="good">market pays ~{money(line.market.typical)}</Pill>
+            )}
           </div>
           <div className="note">
             {PLATFORM_LABEL[line.platform]} {handle ? `· ${handle}` : ''} ·{' '}
@@ -137,11 +178,7 @@ function RateRow({ line }: { line: RateLine }) {
           <div className="adj">
             <div>Cost of making it</div>
             <div className="f">{money(line.productionFloor)}</div>
-            <div className="why">
-              {line.flooredByProduction
-                ? 'This is what sets your price. The work takes the same hours whoever is watching, so reach-based pricing would have you make this for less than it costs you. Below this number the correct answer to a sponsor is no.'
-                : 'The least this could sell for and still be worth making. Your audience clears it comfortably.'}
-            </div>
+            <div className="why">{floorExplanation(line)}</div>
           </div>
 
           <div className="adj">
@@ -155,6 +192,14 @@ function RateRow({ line }: { line: RateLine }) {
                 : 'Rounded to a number you can say out loud. The walk-away sits 22% below and the opening ask 35% above, which is the room a normal negotiation needs.'}
             </div>
           </div>
+
+          {line.market && (
+            <div className="adj">
+              <div>What creators your size are paid</div>
+              <div className="f">~{money(line.market.typical)}</div>
+              <div className="why">{line.market.sentence}</div>
+            </div>
+          )}
         </div>
       )}
     </div>

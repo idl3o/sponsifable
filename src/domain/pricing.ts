@@ -1,10 +1,14 @@
 import {
+  BUYOUT,
   EXCLUSIVITY_UPLIFT,
   GEO_WEIGHT,
+  INTRODUCTORY_RATE,
+  MARKET_PAY,
   MEDIAN_ENGAGEMENT,
   NICHE_MULTIPLIER,
+  PAID_USAGE,
+  PAID_USAGE_DAYS,
   PRODUCTION_FLOOR,
-  USAGE_UPLIFT,
   baseCpm,
 } from './benchmarks';
 import type {
@@ -14,6 +18,7 @@ import type {
   DealTerms,
   Format,
   GeoSplit,
+  MarketReference,
   RateLine,
 } from './types';
 
@@ -24,6 +29,8 @@ export const DEFAULT_TERMS: DealTerms = {
   revisions: 1,
   rush: false,
   bundleSize: 1,
+  declaredSpend: 0,
+  introductory: false,
 };
 
 /** Constrain a value to a range. */
@@ -34,6 +41,11 @@ function clamp(value: number, min: number, max: number): number {
 /** True when the creator has recorded any audience geography at all. */
 export function hasGeo(geo: GeoSplit): boolean {
   return geo.tier1 + geo.tier2 + geo.tier3 > 0;
+}
+
+/** True once the creator has a single result on record. It ends the introductory rate. */
+export function hasResults(profile: CreatorProfile): boolean {
+  return profile.proofPoints.some((p) => p.result.trim().length > 0);
 }
 
 /**
@@ -94,6 +106,13 @@ export function roundToNegotiable(amount: number): number {
   return Math.round(amount / 100) * 100;
 }
 
+/** Round to two significant figures: "about 80,000", and too coarse to fingerprint anyone. */
+export function roundHard(n: number): number {
+  if (n <= 0) return 0;
+  const magnitude = 10 ** Math.max(0, Math.floor(Math.log10(n)) - 1);
+  return Math.round(n / magnitude) * magnitude;
+}
+
 /** Describe what the category multiplier means, in one speakable sentence. */
 function nicheRationale(factor: number): string {
   if (factor >= 1.2) {
@@ -141,26 +160,24 @@ function audienceAdjustments(profile: CreatorProfile, channel: Channel): Adjustm
   ];
 }
 
-/** Adjustments that come from the commercial terms rather than the audience. */
-function termsAdjustments(terms: DealTerms): Adjustment[] {
+/** Adjustments from the commercial terms, other than paid usage, which depends on the price. */
+function termsAdjustments(profile: CreatorProfile, terms: DealTerms): Adjustment[] {
   const out: Adjustment[] = [];
+
+  if (terms.introductory && !hasResults(profile)) {
+    out.push({
+      label: 'Introductory rate',
+      factor: INTRODUCTORY_RATE.factor,
+      rationale:
+        "An introductory rate, offered until the first result is on record, in exchange for permission to publish this campaign's results as a case study.",
+    });
+  }
 
   if (terms.exclusivityDays > 0) {
     out.push({
       label: `Category exclusivity, ${terms.exclusivityDays} days`,
       factor: EXCLUSIVITY_UPLIFT[terms.exclusivityDays] ?? 1,
       rationale: `Turning away every competitor for ${terms.exclusivityDays} days has a real cost, and this covers it.`,
-    });
-  }
-
-  if (terms.usageRights !== 'organic-only') {
-    out.push({
-      label: `Usage rights: ${terms.usageRights.replace(/-/g, ' ')}`,
-      factor: USAGE_UPLIFT[terms.usageRights],
-      rationale:
-        terms.usageRights === 'full-buyout'
-          ? 'A buyout lets the sponsor run this asset anywhere, forever. That is a media licence, not a post.'
-          : 'Paid spend behind the creator handle reaches far beyond the organic audience being priced here.',
     });
   }
 
@@ -193,6 +210,60 @@ function termsAdjustments(terms: DealTerms): Adjustment[] {
   return out;
 }
 
+/** What one period of paid usage costs on a placement with this organic price. */
+export function periodFee(organic: number): number {
+  return Math.max(PAID_USAGE.sharePerPeriod * organic, PAID_USAGE.minimumPerPeriod);
+}
+
+/**
+ * The fee for paid usage on top of an organic price, and the sentence that
+ * justifies it. Zero for organic-only rights or an unsellable placement.
+ */
+export function usageFee(terms: DealTerms, organic: number): { fee: number; rationale: string } {
+  if (terms.usageRights === 'organic-only' || organic <= 0) return { fee: 0, rationale: '' };
+  const spendFee = PAID_USAGE.shareOfDeclaredSpend * Math.max(0, terms.declaredSpend);
+  const spendPct = Math.round(PAID_USAGE.shareOfDeclaredSpend * 100);
+  const spendSentence = `Priced at ${spendPct}% of the sponsor's declared £${terms.declaredSpend.toLocaleString('en-GB')} paid spend, so the fee scales with how widely your face is used.`;
+
+  if (terms.usageRights === 'full-buyout') {
+    const licence = Math.max(BUYOUT.shareOfOrganic * organic, BUYOUT.minimumPeriods * PAID_USAGE.minimumPerPeriod);
+    if (spendFee > licence) return { fee: spendFee, rationale: spendSentence };
+    return {
+      fee: licence,
+      rationale: `A buyout lets the sponsor run this asset anywhere, forever. That is a media licence, priced as the placement again and never below ${BUYOUT.minimumPeriods} months of paid usage.`,
+    };
+  }
+
+  const periods = PAID_USAGE_DAYS[terms.usageRights] / PAID_USAGE.periodDays;
+  const byPeriod = periods * periodFee(organic);
+  if (spendFee > byPeriod) return { fee: spendFee, rationale: spendSentence };
+  const pct = Math.round(PAID_USAGE.sharePerPeriod * 100);
+  return {
+    fee: byPeriod,
+    rationale: `${periods} × ${PAID_USAGE.periodDays} days of paid usage, each priced at ${pct}% of the placement with a £${PAID_USAGE.minimumPerPeriod} minimum. The sponsor's paid reach does not shrink with your audience, so neither does the fee.`,
+  };
+}
+
+/**
+ * What the paid market pays a creator this size for this deliverable, where
+ * the evidence covers it. A reference beside the price, never an input to it.
+ */
+export function marketReference(channel: Channel, format: Format, organic: number): MarketReference | null {
+  if (!MARKET_PAY.platforms.includes(channel.platform) || !MARKET_PAY.formats.includes(format)) return null;
+  if (channel.followers <= 0 || organic <= 0) return null;
+  const usd = MARKET_PAY.usdAt10kFollowers * (channel.followers / 10_000) ** MARKET_PAY.elasticity;
+  const typical = roundToNegotiable(usd / MARKET_PAY.usdPerGbp);
+  const ratio = organic / typical;
+  const position = ratio < 1 - MARKET_PAY.inLineTolerance ? 'below' : ratio > 1 + MARKET_PAY.inLineTolerance ? 'above' : 'in-line';
+  const basis = `Creators with about ${roundHard(channel.followers).toLocaleString('en-GB')} followers are typically paid about £${typical.toLocaleString('en-GB')} per deliverable (${MARKET_PAY.citation}).`;
+  const sentence = {
+    below: `${basis} The market pays on followers and this card prices on views, so asking for the market rate is defensible.`,
+    above: `${basis} This price sits above that, so expect to negotiate, and know which line of the derivation you will defend.`,
+    'in-line': `${basis} This price is in line with it.`,
+  }[position];
+  return { typical, followers: channel.followers, position, sentence };
+}
+
 /**
  * Price a single placement.
  *
@@ -208,23 +279,33 @@ export function priceLine(
 ): RateLine {
   const cpm = baseCpm(channel.platform, format);
   const impressions = Math.max(0, Math.round(channel.medianViews));
-
   const audience = audienceAdjustments(profile, channel);
-  const commercial = termsAdjustments(terms);
-  const adjustments = [...audience, ...commercial];
+  const commercial = termsAdjustments(profile, terms);
+  const product = (list: Adjustment[]) => list.reduce((acc, a) => acc * a.factor, 1);
 
-  const compounded = adjustments.reduce((acc, a) => acc * a.factor, 1);
-  const mediaValue = (impressions / 1000) * cpm * compounded;
-
-  // Terms uplift the labour cost too: a buyout on a small channel is still a
-  // buyout. Audience multipliers do not, since the floor is about the work.
-  const termsFactor = commercial.reduce((acc, a) => acc * a.factor, 1);
+  // Terms scale the labour cost too: an exclusive, rushed piece is still more
+  // work. Audience multipliers do not, since the floor is about the work.
+  const termsFactor = product(commercial);
+  const media = (impressions / 1000) * cpm * product(audience) * termsFactor;
   const sellable = cpm > 0 && impressions > 0;
-  const productionFloor = sellable ? PRODUCTION_FLOOR[format] * termsFactor : 0;
+  const production = sellable ? PRODUCTION_FLOOR[format] * termsFactor : 0;
+  const organic = Math.max(media, production);
 
-  const flooredByProduction = productionFloor > mediaValue;
-  const target = Math.max(mediaValue, productionFloor);
+  // Paid usage is priced on the organic price, then applied to both numbers
+  // alike so the derivation still reads as one list of factors.
+  const usage = usageFee(terms, organic);
+  const usageFactor = organic > 0 ? 1 + usage.fee / organic : 1;
+  const adjustments = [...audience, ...commercial];
+  if (usage.fee > 0) {
+    adjustments.push({
+      label: `Usage rights: ${terms.usageRights.replace(/-/g, ' ')}`,
+      factor: usageFactor,
+      rationale: usage.rationale,
+    });
+  }
 
+  const mediaValue = media * usageFactor;
+  const productionFloor = production * usageFactor;
   return {
     channelId: channel.id,
     platform: channel.platform,
@@ -234,12 +315,14 @@ export function priceLine(
     adjustments,
     mediaValue: roundToNegotiable(mediaValue),
     productionFloor: roundToNegotiable(productionFloor),
-    flooredByProduction,
-    target: roundToNegotiable(target),
+    flooredByProduction: production > media,
+    target: roundToNegotiable(organic * usageFactor),
     // Below the production floor the honest answer is no, so the walk-away
     // price never drops beneath it however small the audience.
     floor: roundToNegotiable(Math.max(mediaValue * 0.78, productionFloor)),
     stretch: roundToNegotiable(Math.max(mediaValue * 1.35, productionFloor * 1.25)),
+    introductory: commercial.some((a) => a.label === 'Introductory rate'),
+    market: marketReference(channel, format, organic),
   };
 }
 

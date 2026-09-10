@@ -166,6 +166,9 @@ const run = async () => {
   // --- deal log: record a win, then a sighting that overran its licence ---
   await page.getByRole('tab', { name: 'Rate card' }).click();
   await page.getByLabel('Usage rights').selectOption('whitelisting-30');
+  if ((await page.getByLabel("Sponsor's declared paid spend, GBP").count()) === 0) {
+    note('error', 'desktop/terms', 'declared spend field missing once paid usage is on');
+  }
   await page.getByRole('tab', { name: 'Deals' }).click();
   await page.getByLabel('Agreed, GBP').fill('800');
   await page.getByRole('button', { name: 'Record' }).click();
@@ -180,7 +183,7 @@ const run = async () => {
   await page.getByRole('button', { name: 'Record sighting' }).click();
   await page.waitForTimeout(200);
   const overrun = await page.locator('main').innerText();
-  if (!/75 days in all/.test(overrun) || !/difference is £[\d,]+/.test(overrun)) {
+  if (!/75 days in all/.test(overrun) || !/£[\d,]+ in total/.test(overrun)) {
     note('error', 'desktop/deals', 'overrun paragraph missing or unpriced');
   }
   if (!/not verified/.test(overrun)) note('error', 'desktop/deals', 'manual sighting not marked unverified');
@@ -192,6 +195,23 @@ const run = async () => {
   await page.screenshot({ path: join(SHOTS, 'deals-overrun.png'), fullPage: true });
   await page.getByRole('tab', { name: 'Rate card' }).click();
   await page.getByLabel('Usage rights').selectOption('organic-only');
+
+  // --- the paid-market reference, on a channel the evidence covers ---
+  await page.getByRole('tab', { name: 'Profile' }).click();
+  await page.getByRole('button', { name: 'Instagram' }).click();
+  await page.getByLabel('Followers or subscribers').last().fill('80000');
+  await page.getByLabel('Median views per post').last().fill('20000');
+  await page.getByRole('tab', { name: 'Rate card' }).click();
+  await page.waitForTimeout(200);
+  if (!(await page.getByText(/market pays ~£[\d,]+/).first().isVisible().catch(() => false))) {
+    note('error', 'desktop/market', 'no market reference for an 80k-follower Instagram channel');
+  }
+  await page.getByText(/market pays ~£/).first().click();
+  await page.waitForTimeout(150);
+  if (!/Smith 2026/.test(await page.locator('main').innerText())) {
+    note('error', 'desktop/market', 'market reference does not name its source');
+  }
+  await page.screenshot({ path: join(SHOTS, 'market-reference.png'), fullPage: true });
 
   // --- empty state: delete every channel ---
   await page.getByRole('tab', { name: 'Profile' }).click();
