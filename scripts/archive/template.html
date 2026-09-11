@@ -1,0 +1,294 @@
+<title>{{TITLE}}</title>
+<meta name="description" content="{{SUBTITLE}}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
+<style>
+  /* Dark-first: the void is the default ground; light is the swap. */
+  :root {
+    --ground: #0e1117;
+    --surface: #151a23;
+    --line: #262d3a;
+    --ink: #e7e2d6;
+    --ink-2: #b1b5bf;
+    --muted: #858c9a;
+    --gold: #d1ae62;
+    --cyan: #6cc3d1;
+    --gold-mark: #b88a2c;
+    --cyan-mark: #26a3ba;
+    --serif: "Literata", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --display: "Cinzel", "Trajan Pro", "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ground: #f2f3f5;
+      --surface: #ffffff;
+      --line: #d7dae1;
+      --ink: #151922;
+      --ink-2: #3f4655;
+      --muted: #5c6474;
+      --gold: #7e5a0e;
+      --cyan: #006f85;
+      --gold-mark: #946b12;
+      --cyan-mark: #00839c;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #f2f3f5;
+    --surface: #ffffff;
+    --line: #d7dae1;
+    --ink: #151922;
+    --ink-2: #3f4655;
+    --muted: #5c6474;
+    --gold: #7e5a0e;
+    --cyan: #006f85;
+    --gold-mark: #946b12;
+    --cyan-mark: #00839c;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--ground); }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 1.0625rem;
+    line-height: 1.68;
+    font-optical-sizing: auto;
+    padding-inline: 20px;
+    padding-block: 0 64px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1060px; margin: 0 auto; }
+  .measure { max-width: 42rem; }
+  @media (min-width: 980px) {
+    .measure { margin-left: 8.5rem; }
+  }
+
+  /* The Greek key: a meander drawn once, masked so it takes the theme's gold. */
+  .key-band {
+    height: 14px;
+    background: var(--gold);
+    opacity: 0.7;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='14'%3E%3Cpath d='M0 13H24M22 13V1H6V9H16V5H11' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E") repeat-x left center;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='14'%3E%3Cpath d='M0 13H24M22 13V1H6V9H16V5H11' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E") repeat-x left center;
+  }
+
+  header.mast { padding-block: 40px 28px; display: grid; gap: 22px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(2.1rem, 5.4vw, 3.4rem);
+    line-height: 1.08;
+    letter-spacing: 0.04em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .subtitle { font-style: italic; font-size: 1.25rem; color: var(--ink-2); margin: 0; text-wrap: balance; }
+  .byline { font-family: var(--mono); font-size: 0.8125rem; color: var(--muted); margin: 0; }
+
+  nav.contents {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding-block: 18px;
+    margin-block: 8px 36px;
+  }
+  nav.contents h2 { margin: 0 0 10px; font-size: 0.75rem; }
+  nav.contents ol { list-style: none; margin: 0; padding: 0; columns: 2 16rem; column-gap: 2rem; }
+  nav.contents li { break-inside: avoid; }
+  nav.contents a {
+    display: flex; gap: 0.75rem; padding-block: 3px;
+    color: var(--ink-2); text-decoration: none; font-size: 0.95rem;
+  }
+  nav.contents a:hover { color: var(--ink); }
+  .toc-n { font-family: var(--display); color: var(--gold); min-width: 1.4rem; text-align: right; }
+
+  article h2 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 1.3rem;
+    letter-spacing: 0.06em;
+    line-height: 1.3;
+    margin: 3.2rem 0 1rem;
+    text-wrap: balance;
+    position: relative;
+    scroll-margin-top: 24px;
+  }
+  article h2 .num { color: var(--gold); margin-right: 0.7rem; }
+  @media (min-width: 980px) {
+    article h2 .num {
+      position: absolute; right: 100%; margin-right: 1.4rem;
+      font-size: 2.4rem; line-height: 1; top: -0.35rem; font-weight: 400;
+    }
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  article h3 { font-style: italic; font-weight: 400; font-size: 1.15rem; margin: 2rem 0 0.5rem; color: var(--ink); }
+  article p { margin: 0 0 1.05rem; }
+  article > .measure > h2#abstract + p, article > .measure > h2#abstract + p + p { font-size: 1.12rem; }
+  article strong { font-weight: 600; color: var(--ink); }
+  article em { color: var(--ink); }
+  a { color: var(--cyan); text-underline-offset: 3px; }
+  a:focus-visible, #hover-hit:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+  code { font-family: var(--mono); font-size: 0.86em; color: var(--ink); }
+
+  pre.formula {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 14px 18px;
+    margin: 0 0 1.2rem;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+  }
+  pre.formula code { font-size: inherit; }
+
+  .table-wrap { overflow-x: auto; margin: 0.4rem 0 1.4rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 12px 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-family: var(--mono); font-weight: 500; font-size: 0.72rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); border-bottom-color: var(--ink-2);
+  }
+  td { color: var(--ink-2); }
+  td:first-child { color: var(--ink); }
+  td[style*="right"] { font-family: var(--mono); font-size: 0.84rem; }
+
+  article ul, article ol:not(.refs) { padding-left: 1.1rem; margin: 0 0 1.2rem; }
+  article li { margin-bottom: 0.45rem; }
+  article li::marker { color: var(--gold); }
+  h2#what-is-declined + ul { list-style: none; padding-left: 0; border-top: 1px solid var(--line); }
+  h2#what-is-declined + ul li {
+    padding-block: 9px; margin: 0; border-bottom: 1px solid var(--line); color: var(--ink-2);
+  }
+  h2#references + ol { font-size: 0.9rem; color: var(--ink-2); padding-left: 1.6rem; }
+  h2#references + ol li::marker { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+
+  /* Figure 1 */
+  figure.chart { margin: 1.6rem 0 0.4rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; font-family: var(--mono); font-size: 0.75rem; color: var(--ink-2); margin-bottom: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .key { display: inline-block; width: 22px; height: 0; border-top: 2px solid; }
+  .key-price { border-top: 3px solid var(--ink); }
+  .key-reach { border-top-color: var(--cyan-mark); }
+  .key-floor { border-top: 2px dashed var(--gold-mark); }
+  .chart-box { position: relative; background: var(--surface); border: 1px solid var(--line); padding: 10px 6px 4px; }
+  .chart-box svg { display: block; width: 100%; height: auto; max-width: 100%; }
+  .grid { stroke: var(--line); stroke-width: 1; }
+  .axis { stroke: var(--muted); stroke-width: 1; }
+  .tick { stroke: var(--muted); stroke-width: 1; }
+  .axis-label { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .axis-title { fill: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; }
+  .series-floor { stroke: var(--gold-mark); stroke-width: 2; stroke-dasharray: 7 5; fill: none; }
+  .series-reach { stroke: var(--cyan-mark); stroke-width: 2; fill: none; }
+  .series-price { stroke: var(--ink); stroke-width: 3; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+  .marker { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+  .marker-reach { fill: var(--cyan-mark); stroke: var(--surface); stroke-width: 2; }
+  .annot { fill: var(--ink-2); font-family: var(--serif); font-size: 13px; font-style: italic; }
+  .direct { fill: var(--ink-2); font-family: var(--mono); font-size: 11px; }
+  .hover-line { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 2 3; }
+  .tip {
+    position: absolute; pointer-events: none; min-width: 11rem;
+    background: var(--ground); border: 1px solid var(--line); padding: 8px 10px;
+    font-family: var(--mono); font-size: 0.75rem; line-height: 1.55; color: var(--ink-2);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+  }
+  .tip b { color: var(--ink); font-weight: 500; }
+  figure.chart + p em, figure.chart + p { font-size: 0.92rem; color: var(--ink-2); }
+
+  footer.colophon { margin-top: 3.4rem; display: grid; gap: 22px; }
+  .colophon-body { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+  .seal { width: 92px; height: 92px; color: var(--gold); flex: none; }
+  .colophon-body p { margin: 0; font-size: 0.9rem; color: var(--muted); max-width: 34rem; }
+
+  @media print {
+    :root { --ground: #fff; --surface: #fff; --line: #ccc; --ink: #111; --ink-2: #333; --muted: #555; --gold: #7e5a0e; --cyan: #006f85; --gold-mark: #946b12; --cyan-mark: #00839c; }
+    .tip, .hover-line { display: none; }
+    body { font-size: 11pt; }
+  }
+</style>
+
+<div class="page">
+  <header class="mast">
+    <div class="key-band" role="presentation"></div>
+    <div class="measure" style="display:grid;gap:14px">
+      <p class="eyebrow">{{EYEBROW}}</p>
+      <h1>{{TITLE}}</h1>
+      <p class="subtitle">{{SUBTITLE}}</p>
+      <p class="byline">{{BYLINE}}</p>
+    </div>
+  </header>
+
+  <article>
+    <div class="measure">
+      <nav class="contents" aria-label="Contents">
+        <h2 style="font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500">Contents</h2>
+        <ol>
+{{TOC}}
+        </ol>
+      </nav>
+{{BODY}}
+    </div>
+  </article>
+
+  <footer class="colophon">
+    <div class="key-band" role="presentation"></div>
+    <div class="measure colophon-body">
+      {{SEAL}}
+      <div>{{COLOPHON}}</div>
+    </div>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    const plot = "{{PLOT}}".split(",").map(Number);
+    const [L, T, PW, PH] = plot;
+    const svg = document.querySelector("#figure-floor svg");
+    const hit = document.getElementById("hover-hit");
+    const line = document.getElementById("hover-line");
+    const tip = document.getElementById("tip");
+    if (!svg || !hit || !line || !tip) return;
+    const gbp = (n) => "£" + Math.round(n).toLocaleString("en-GB");
+
+    function show(clientX) {
+      const pt = svg.createSVGPoint();
+      pt.x = clientX; pt.y = 0;
+      const local = pt.matrixTransform(svg.getScreenCTM().inverse());
+      const views = Math.round(Math.min(30000, Math.max(0, ((local.x - L) / PW) * 30000)) / 100) * 100;
+      const x = L + (views / 30000) * PW;
+      const reach = views * 0.04;
+      const price = Math.max(reach, 450);
+      line.setAttribute("x1", x); line.setAttribute("x2", x);
+      line.setAttribute("visibility", "visible");
+      tip.innerHTML =
+        "<b>" + views.toLocaleString("en-GB") + " views</b><br>" +
+        "Price <b>" + gbp(price) + "</b><br>" +
+        "Reach alone " + gbp(reach) + "<br>" +
+        "Floor £450 · " + (reach < 450 ? "floor sets it" : "reach sets it");
+      tip.hidden = false;
+      const box = svg.getBoundingClientRect();
+      const px = ((x) / plot[4]) * box.width;
+      const left = px + 14 + tip.offsetWidth > box.width ? px - tip.offsetWidth - 14 : px + 14;
+      tip.style.left = left + "px";
+      tip.style.top = "18px";
+    }
+    function hide() { tip.hidden = true; line.setAttribute("visibility", "hidden"); }
+    hit.addEventListener("pointermove", (e) => show(e.clientX));
+    hit.addEventListener("pointerleave", hide);
+  })();
+</script>
