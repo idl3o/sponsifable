@@ -196,7 +196,6 @@ describe('calibration sweep', () => {
       }
     }
 
-    // eslint-disable-next-line no-console
     console.log(`\n${rows.join('\n')}\n`);
 
     expect(failures).toEqual([]);
