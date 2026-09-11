@@ -44,6 +44,7 @@ class _Reader:
         self.data, self.pos = data, 0
 
     def raw(self, n: int) -> bytes:
+        """The next n bytes."""
         if self.pos + n > len(self.data):
             raise ValueError("truncated SSH structure")
         out = self.data[self.pos : self.pos + n]
@@ -51,9 +52,11 @@ class _Reader:
         return out
 
     def uint32(self) -> int:
+        """The next big-endian 32-bit unsigned integer."""
         return struct.unpack(">I", self.raw(4))[0]
 
     def string(self) -> bytes:
+        """The next length-prefixed byte string."""
         return self.raw(self.uint32())
 
 
@@ -69,6 +72,7 @@ def key_blob(public_key: str) -> bytes:
 
 
 def key_type(public_key: str) -> str:
+    """The algorithm name at the start of an OpenSSH public key line, e.g. ssh-ed25519."""
     return public_key.split()[0]
 
 

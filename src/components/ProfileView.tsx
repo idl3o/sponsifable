@@ -14,11 +14,38 @@ const PLATFORM_OPTIONS = (Object.keys(PLATFORM_LABEL) as Platform[]).map((value)
   label: PLATFORM_LABEL[value],
 }));
 
+/** The three audience numbers for a channel: followers, median views and engagement. */
+function AudienceFields({ channel }: { channel: Channel }) {
+  const updateChannel = useStore((s) => s.updateChannel);
+  return (
+    <>
+      <NumberField
+        label="Followers or subscribers"
+        value={channel.followers}
+        onChange={(followers) => updateChannel(channel.id, { followers })}
+        hint="Used only as a credibility check. It does not set the price."
+      />
+      <NumberField
+        label="Median views per post"
+        value={channel.medianViews}
+        onChange={(medianViews) => updateChannel(channel.id, { medianViews })}
+        hint="Median, not average. One viral video should not price the next deal."
+      />
+      <NumberField
+        label="Engagement rate, %"
+        value={Number((channel.engagementRate * 100).toFixed(2))}
+        step={0.1}
+        onChange={(pct) => updateChannel(channel.id, { engagementRate: pct / 100 })}
+        hint="Likes, comments and shares as a share of views."
+      />
+    </>
+  );
+}
+
 /** One editable channel. */
 function ChannelCard({ channel }: { channel: Channel }) {
   const updateChannel = useStore((s) => s.updateChannel);
   const removeChannel = useStore((s) => s.removeChannel);
-
   return (
     <Card>
       <div className="spread" style={{ marginBottom: 10 }}>
@@ -27,7 +54,6 @@ function ChannelCard({ channel }: { channel: Channel }) {
           Remove
         </Button>
       </div>
-
       <SelectField
         label="Platform"
         value={channel.platform}
@@ -35,35 +61,13 @@ function ChannelCard({ channel }: { channel: Channel }) {
         onChange={(platform) => updateChannel(channel.id, { platform })}
         hint="Changing this resets the formats on offer."
       />
-
       <TextField
         label="Handle"
         value={channel.handle}
         placeholder="@yourhandle"
         onChange={(handle) => updateChannel(channel.id, { handle })}
       />
-
-      <NumberField
-        label="Followers or subscribers"
-        value={channel.followers}
-        onChange={(followers) => updateChannel(channel.id, { followers })}
-        hint="Used only as a credibility check. It does not set the price."
-      />
-
-      <NumberField
-        label="Median views per post"
-        value={channel.medianViews}
-        onChange={(medianViews) => updateChannel(channel.id, { medianViews })}
-        hint="Median, not average. One viral video should not price the next deal."
-      />
-
-      <NumberField
-        label="Engagement rate, %"
-        value={Number((channel.engagementRate * 100).toFixed(2))}
-        step={0.1}
-        onChange={(pct) => updateChannel(channel.id, { engagementRate: pct / 100 })}
-        hint="Likes, comments and shares as a share of views."
-      />
+      <AudienceFields channel={channel} />
     </Card>
   );
 }
@@ -142,64 +146,69 @@ function ProofCard() {
   );
 }
 
-export function ProfileView() {
+/** Who the creator is, how to reach them, and what category they work in. */
+function IdentityCard() {
   const profile = useStore((s) => s.profile);
   const updateProfile = useStore((s) => s.updateProfile);
-  const addChannel = useStore((s) => s.addChannel);
+  return (
+    <Card title="Identity">
+      <TextField label="Name" value={profile.name} onChange={(name) => updateProfile({ name })} />
+      <TextField
+        label="Tagline"
+        value={profile.tagline}
+        placeholder="What you make, in six words"
+        onChange={(tagline) => updateProfile({ tagline })}
+      />
+      <TextField
+        label="Contact email"
+        value={profile.contactEmail}
+        onChange={(contactEmail) => updateProfile({ contactEmail })}
+      />
+      <SelectField
+        label="Category"
+        value={profile.niche}
+        options={NICHE_OPTIONS}
+        onChange={(niche) => updateProfile({ niche })}
+        hint="Sets how much advertisers in your space pay per impression."
+      />
+    </Card>
+  );
+}
 
+/** One button per platform, each adding a blank channel. */
+function AddChannelCard() {
+  const addChannel = useStore((s) => s.addChannel);
+  return (
+    <Card title="Add a channel">
+      <div className="row">
+        {PLATFORM_OPTIONS.map((option) => (
+          <Button key={option.value} onClick={() => addChannel(option.value)}>
+            {option.label}
+          </Button>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+/** The creator's profile, from which every price and pitch is derived. */
+export function ProfileView() {
+  const channels = useStore((s) => s.profile.channels);
   return (
     <>
       <h1>Your profile</h1>
-      <p className="lede">
-        Everything downstream is derived from this page. Nothing here leaves your browser.
-      </p>
-
+      <p className="lede">Everything downstream is derived from this page. Nothing here leaves your browser.</p>
       <div className="split">
         <div className="stack">
-          <Card title="Identity">
-            <TextField
-              label="Name"
-              value={profile.name}
-              onChange={(name) => updateProfile({ name })}
-            />
-            <TextField
-              label="Tagline"
-              value={profile.tagline}
-              placeholder="What you make, in six words"
-              onChange={(tagline) => updateProfile({ tagline })}
-            />
-            <TextField
-              label="Contact email"
-              value={profile.contactEmail}
-              onChange={(contactEmail) => updateProfile({ contactEmail })}
-            />
-            <SelectField
-              label="Category"
-              value={profile.niche}
-              options={NICHE_OPTIONS}
-              onChange={(niche) => updateProfile({ niche })}
-              hint="Sets how much advertisers in your space pay per impression."
-            />
-          </Card>
-
+          <IdentityCard />
           <GeographyCard />
           <ProofCard />
         </div>
-
         <div className="stack">
-          {profile.channels.map((channel) => (
+          {channels.map((channel) => (
             <ChannelCard key={channel.id} channel={channel} />
           ))}
-
-          <Card title="Add a channel">
-            <div className="row">
-              {PLATFORM_OPTIONS.map((option) => (
-                <Button key={option.value} onClick={() => addChannel(option.value)}>
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          </Card>
+          <AddChannelCard />
         </div>
       </div>
     </>

@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create, type StoreApi } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { produce } from 'immer';
 import { FORMATS_BY_PLATFORM } from '../domain/benchmarks';
@@ -92,6 +92,175 @@ function migrate(persisted: unknown, version: number): Persisted {
   return { profile, terms, prospects, deals, seq: initialState.seq };
 }
 
+type SetState = StoreApi<State & Actions>['setState'];
+/** Apply an immer recipe to the state. */
+type Edit = (recipe: (s: State) => void) => void;
+
+const editWith =
+  (set: SetState): Edit =>
+  (recipe) =>
+    set(produce<State>(recipe));
+
+/** Channels on the profile. Switching platform resets the format list. */
+function channelActions(edit: Edit): Pick<Actions, 'addChannel' | 'updateChannel' | 'removeChannel'> {
+  return {
+    addChannel: (platform) =>
+      edit((s) => {
+        s.seq += 1;
+        s.profile.channels.push({
+          id: `ch-${s.seq}`,
+          platform,
+          handle: '',
+          followers: 0,
+          medianViews: 0,
+          engagementRate: 0,
+          formats: [...(FORMATS_BY_PLATFORM[platform] ?? [])],
+        });
+      }),
+    updateChannel: (id, patch) =>
+      edit((s) => {
+        const channel = s.profile.channels.find((c) => c.id === id);
+        if (!channel) return;
+        Object.assign(channel, patch);
+        // Switching platform invalidates the format list.
+        if (patch.platform) channel.formats = [...(FORMATS_BY_PLATFORM[patch.platform] ?? [])];
+      }),
+    removeChannel: (id) =>
+      edit((s) => {
+        s.profile.channels = s.profile.channels.filter((c) => c.id !== id);
+      }),
+  };
+}
+
+/** The profile's own fields, its geography and its proof points. */
+function profileActions(
+  edit: Edit,
+): Pick<Actions, 'updateProfile' | 'updateGeo' | 'addProofPoint' | 'updateProofPoint' | 'removeProofPoint' | 'setTerms'> {
+  return {
+    updateProfile: (patch) => edit((s) => void Object.assign(s.profile, patch)),
+    updateGeo: (tier, value) => edit((s) => void (s.profile.geo[tier] = Math.max(0, value))),
+    addProofPoint: () =>
+      edit((s) => {
+        s.seq += 1;
+        s.profile.proofPoints.push({ id: `pp-${s.seq}`, label: '', result: '' });
+      }),
+    updateProofPoint: (id, patch) =>
+      edit((s) => {
+        const proof = s.profile.proofPoints.find((p) => p.id === id);
+        if (proof) Object.assign(proof, patch);
+      }),
+    removeProofPoint: (id) =>
+      edit((s) => {
+        s.profile.proofPoints = s.profile.proofPoints.filter((p) => p.id !== id);
+      }),
+    setTerms: (patch) => edit((s) => void Object.assign(s.terms, patch)),
+  };
+}
+
+/** A blank prospect in the creator's own category, still being researched. */
+function blankProspect(id: string, niche: CreatorProfile['niche']): Prospect {
+  return {
+    id,
+    brand: '',
+    product: '',
+    niche,
+    contactName: '',
+    contactEmail: '',
+    budgetBand: [0, 0],
+    sellsInto: ['tier1'],
+    evidence: '',
+    stage: 'researching',
+    lastContactedOn: '',
+    notes: '',
+  };
+}
+
+/** The prospect list and the outreach composer's focus. */
+function prospectActions(
+  edit: Edit,
+  set: SetState,
+): Pick<Actions, 'addProspect' | 'updateProspect' | 'removeProspect' | 'openOutreach'> {
+  return {
+    addProspect: () =>
+      edit((s) => {
+        s.seq += 1;
+        s.prospects.unshift(blankProspect(`pr-${s.seq}`, s.profile.niche));
+      }),
+    updateProspect: (id, patch) =>
+      edit((s) => {
+        const prospect = s.prospects.find((p) => p.id === id);
+        if (prospect) Object.assign(prospect, patch);
+      }),
+    removeProspect: (id) =>
+      edit((s) => {
+        s.prospects = s.prospects.filter((p) => p.id !== id);
+        if (s.activeProspectId === id) s.activeProspectId = null;
+      }),
+    openOutreach: (id) => set({ activeProspectId: id, tab: 'outreach' }),
+  };
+}
+
+/** The deal log and each deal's sightings. */
+function dealActions(
+  edit: Edit,
+): Pick<Actions, 'recordDeal' | 'updateDeal' | 'removeDeal' | 'addSighting' | 'removeSighting'> {
+  return {
+    recordDeal: (build) =>
+      edit((s) => {
+        s.seq += 1;
+        const deal = build(`dl-${s.seq}`);
+        if (!deal) return;
+        s.deals.unshift(deal);
+        const prospect = s.prospects.find((p) => p.id === deal.prospectId);
+        if (prospect) prospect.stage = deal.outcome;
+      }),
+    updateDeal: (id, patch) =>
+      edit((s) => {
+        const deal = s.deals.find((d) => d.id === id);
+        if (deal) Object.assign(deal, patch);
+      }),
+    removeDeal: (id) =>
+      edit((s) => {
+        s.deals = s.deals.filter((d) => d.id !== id);
+      }),
+    addSighting: (dealId, sighting) =>
+      edit((s) => {
+        const deal = s.deals.find((d) => d.id === dealId);
+        if (!deal) return;
+        s.seq += 1;
+        deal.sightings.push({ ...sighting, id: `st-${s.seq}` });
+      }),
+    removeSighting: (dealId, sightingId) =>
+      edit((s) => {
+        const deal = s.deals.find((d) => d.id === dealId);
+        if (deal) deal.sightings = deal.sightings.filter((x) => x.id !== sightingId);
+      }),
+  };
+}
+
+/** Navigation, and replacing the whole workspace at once. */
+function workspaceActions(set: SetState): Pick<Actions, 'setTab' | 'importAll' | 'resetToSample'> {
+  return {
+    setTab: (tab) => set({ tab }),
+    importAll: (workspace) =>
+      set({
+        profile: workspace.profile,
+        terms: workspace.terms,
+        prospects: workspace.prospects,
+        deals: workspace.deals,
+        activeProspectId: null,
+      }),
+    resetToSample: () =>
+      set({
+        profile: SAMPLE_PROFILE,
+        terms: DEFAULT_TERMS,
+        prospects: SAMPLE_PROSPECTS,
+        deals: [],
+        activeProspectId: null,
+      }),
+  };
+}
+
 /**
  * Application state, persisted to this browser only.
  *
@@ -101,179 +270,17 @@ function migrate(persisted: unknown, version: number): Persisted {
  */
 export const useStore = create<State & Actions>()(
   persist(
-    (set) => ({
-      ...initialState,
-
-      setTab: (tab) => set({ tab }),
-
-      updateProfile: (patch) =>
-        set(produce<State>((s) => void Object.assign(s.profile, patch))),
-
-      updateGeo: (tier, value) =>
-        set(produce<State>((s) => void (s.profile.geo[tier] = Math.max(0, value)))),
-
-      addChannel: (platform) =>
-        set(
-          produce<State>((s) => {
-            s.seq += 1;
-            s.profile.channels.push({
-              id: `ch-${s.seq}`,
-              platform,
-              handle: '',
-              followers: 0,
-              medianViews: 0,
-              engagementRate: 0,
-              formats: [...(FORMATS_BY_PLATFORM[platform] ?? [])],
-            });
-          }),
-        ),
-
-      updateChannel: (id, patch) =>
-        set(
-          produce<State>((s) => {
-            const channel = s.profile.channels.find((c) => c.id === id);
-            if (!channel) return;
-            Object.assign(channel, patch);
-            // Switching platform invalidates the format list.
-            if (patch.platform) channel.formats = [...(FORMATS_BY_PLATFORM[patch.platform] ?? [])];
-          }),
-        ),
-
-      removeChannel: (id) =>
-        set(
-          produce<State>((s) => {
-            s.profile.channels = s.profile.channels.filter((c) => c.id !== id);
-          }),
-        ),
-
-      addProofPoint: () =>
-        set(
-          produce<State>((s) => {
-            s.seq += 1;
-            s.profile.proofPoints.push({ id: `pp-${s.seq}`, label: '', result: '' });
-          }),
-        ),
-
-      updateProofPoint: (id, patch) =>
-        set(
-          produce<State>((s) => {
-            const proof = s.profile.proofPoints.find((p) => p.id === id);
-            if (proof) Object.assign(proof, patch);
-          }),
-        ),
-
-      removeProofPoint: (id) =>
-        set(
-          produce<State>((s) => {
-            s.profile.proofPoints = s.profile.proofPoints.filter((p) => p.id !== id);
-          }),
-        ),
-
-      setTerms: (patch) => set(produce<State>((s) => void Object.assign(s.terms, patch))),
-
-      addProspect: () =>
-        set(
-          produce<State>((s) => {
-            s.seq += 1;
-            const id = `pr-${s.seq}`;
-            s.prospects.unshift({
-              id,
-              brand: '',
-              product: '',
-              niche: s.profile.niche,
-              contactName: '',
-              contactEmail: '',
-              budgetBand: [0, 0],
-              sellsInto: ['tier1'],
-              evidence: '',
-              stage: 'researching',
-              lastContactedOn: '',
-              notes: '',
-            });
-          }),
-        ),
-
-      updateProspect: (id, patch) =>
-        set(
-          produce<State>((s) => {
-            const prospect = s.prospects.find((p) => p.id === id);
-            if (prospect) Object.assign(prospect, patch);
-          }),
-        ),
-
-      removeProspect: (id) =>
-        set(
-          produce<State>((s) => {
-            s.prospects = s.prospects.filter((p) => p.id !== id);
-            if (s.activeProspectId === id) s.activeProspectId = null;
-          }),
-        ),
-
-      openOutreach: (id) => set({ activeProspectId: id, tab: 'outreach' }),
-
-      recordDeal: (build) =>
-        set(
-          produce<State>((s) => {
-            s.seq += 1;
-            const deal = build(`dl-${s.seq}`);
-            if (!deal) return;
-            s.deals.unshift(deal);
-            const prospect = s.prospects.find((p) => p.id === deal.prospectId);
-            if (prospect) prospect.stage = deal.outcome;
-          }),
-        ),
-
-      updateDeal: (id, patch) =>
-        set(
-          produce<State>((s) => {
-            const deal = s.deals.find((d) => d.id === id);
-            if (deal) Object.assign(deal, patch);
-          }),
-        ),
-
-      removeDeal: (id) =>
-        set(
-          produce<State>((s) => {
-            s.deals = s.deals.filter((d) => d.id !== id);
-          }),
-        ),
-
-      addSighting: (dealId, sighting) =>
-        set(
-          produce<State>((s) => {
-            const deal = s.deals.find((d) => d.id === dealId);
-            if (!deal) return;
-            s.seq += 1;
-            deal.sightings.push({ ...sighting, id: `st-${s.seq}` });
-          }),
-        ),
-
-      removeSighting: (dealId, sightingId) =>
-        set(
-          produce<State>((s) => {
-            const deal = s.deals.find((d) => d.id === dealId);
-            if (deal) deal.sightings = deal.sightings.filter((x) => x.id !== sightingId);
-          }),
-        ),
-
-      importAll: (workspace) =>
-        set({
-          profile: workspace.profile,
-          terms: workspace.terms,
-          prospects: workspace.prospects,
-          deals: workspace.deals,
-          activeProspectId: null,
-        }),
-
-      resetToSample: () =>
-        set({
-          profile: SAMPLE_PROFILE,
-          terms: DEFAULT_TERMS,
-          prospects: SAMPLE_PROSPECTS,
-          deals: [],
-          activeProspectId: null,
-        }),
-    }),
+    (set) => {
+      const edit = editWith(set);
+      return {
+        ...initialState,
+        ...workspaceActions(set),
+        ...profileActions(edit),
+        ...channelActions(edit),
+        ...prospectActions(edit, set),
+        ...dealActions(edit),
+      };
+    },
     {
       // The key keeps its first name so existing saves are found; the format
       // is tracked by `version`, and `migrate` upgrades anything older.

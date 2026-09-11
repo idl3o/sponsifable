@@ -237,6 +237,7 @@ export function baseCpm(platform: Platform, format: Format): number {
   return CPM_BANDS[platform][format] ?? 0;
 }
 
+/** Each platform's name as a creator would write it. */
 export const PLATFORM_LABEL: Record<Platform, string> = {
   youtube: 'YouTube',
   'youtube-shorts': 'YouTube Shorts',
@@ -248,6 +249,7 @@ export const PLATFORM_LABEL: Record<Platform, string> = {
   podcast: 'Podcast',
 };
 
+/** Each format's name as it appears on a rate card. */
 export const FORMAT_LABEL: Record<Format, string> = {
   dedicated: 'Dedicated video',
   integration: '60–90s integration',
@@ -262,6 +264,7 @@ export const FORMAT_LABEL: Record<Format, string> = {
   'episode-read': 'Host-read spot',
 };
 
+/** Each content category's name as it appears to a creator. */
 export const NICHE_LABEL: Record<Niche, string> = {
   finance: 'Finance & investing',
   'b2b-software': 'B2B software',

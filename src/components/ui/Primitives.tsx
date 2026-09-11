@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 
-/** Shared presentational building blocks. No domain knowledge lives here. */
+// Shared presentational building blocks. No domain knowledge lives here.
 
+/** A titled panel. `tight` trims the padding for dense side columns. */
 export function Card({
   title,
   subtitle,
@@ -26,7 +27,8 @@ export function Card({
   );
 }
 
-export function Field({
+/** A labelled form row with an optional hint beneath. */
+function Field({
   label,
   hint,
   children,
@@ -44,6 +46,7 @@ export function Field({
   );
 }
 
+/** A labelled single-line text input. */
 export function TextField({
   label,
   value,
@@ -64,6 +67,7 @@ export function TextField({
   );
 }
 
+/** A labelled number input. A non-finite value shows as 0. */
 export function NumberField({
   label,
   value,
@@ -92,6 +96,7 @@ export function NumberField({
   );
 }
 
+/** A labelled select over a fixed set of string values. */
 export function SelectField<T extends string>({
   label,
   value,
@@ -118,6 +123,7 @@ export function SelectField<T extends string>({
   );
 }
 
+/** One headline figure with a key above and a note below. */
 export function Stat({ k, v, sub }: { k: string; v: string; sub?: string }) {
   return (
     <div className="stat">
@@ -128,6 +134,7 @@ export function Stat({ k, v, sub }: { k: string; v: string; sub?: string }) {
   );
 }
 
+/** A small status label. The tone carries meaning: good, warn, bad or accent. */
 export function Pill({
   children,
   tone = 'plain',
@@ -138,6 +145,7 @@ export function Pill({
   return <span className={tone === 'plain' ? 'pill' : `pill ${tone}`}>{children}</span>;
 }
 
+/** A button. `primary` marks the one main action in a group; `ghost` the destructive or minor ones. */
 export function Button({
   children,
   onClick,
@@ -165,4 +173,14 @@ export function money(amount: number): string {
 /** Format a count with thousands separators. */
 export function count(n: number): string {
   return Math.round(n).toLocaleString('en-GB');
+}
+
+/** Copy text to the clipboard. False when the permission is denied. */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
 }

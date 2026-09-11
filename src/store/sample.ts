@@ -44,6 +44,7 @@ export const SAMPLE_PROFILE: CreatorProfile = {
   ],
 };
 
+/** Example prospects across the fit range, so the pipeline opens with something to rank. Invented. */
 export const SAMPLE_PROSPECTS: Prospect[] = [
   {
     id: 'pr-1',

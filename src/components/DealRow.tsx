@@ -3,7 +3,7 @@ import { FORMAT_LABEL, PLATFORM_LABEL } from '../domain/benchmarks';
 import { priceOverrun, rateSubmissionUrl } from '../domain/deals';
 import type { Deal, Sighting } from '../domain/types';
 import { useStore } from '../store/useStore';
-import { Button, Pill, TextField, money } from './ui/Primitives';
+import { Button, Pill, TextField, copyText, money } from './ui/Primitives';
 
 const LOST_LABEL: Record<NonNullable<Deal['lostReason']>, string> = {
   budget: 'budget',
@@ -13,16 +13,6 @@ const LOST_LABEL: Record<NonNullable<Deal['lostReason']>, string> = {
   'i-declined': 'I declined',
   other: 'other',
 };
-
-/** Copy text to the clipboard, ignoring a denied permission. */
-async function copy(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /** One sighting of the asset running as a paid ad, with the overrun it implies. */
 function SightingLine({ deal, sighting }: { deal: Deal; sighting: Sighting }) {
@@ -59,7 +49,7 @@ function SightingLine({ deal, sighting }: { deal: Deal; sighting: Sighting }) {
         {overrun.sentence && <p style={{ margin: '0 0 6px' }}>{overrun.sentence}</p>}
         <div className="row" style={{ gap: 6 }}>
           {overrun.sentence && (
-            <Button onClick={() => void copy(overrun.sentence).then(setCopied)}>
+            <Button onClick={() => void copyText(overrun.sentence).then(setCopied)}>
               {copied ? 'Copied' : 'Copy paragraph'}
             </Button>
           )}
@@ -98,67 +88,116 @@ function SightingForm({ deal, today }: { deal: Deal; today: string }) {
   );
 }
 
-/** Rights, delivery and sightings for a won deal. */
-function WonDetail({ deal, today }: { deal: Deal; today: string }) {
+/** When the asset was delivered and when the invoice was paid. */
+function DeliveryDates({ deal }: { deal: Deal }) {
   const updateDeal = useStore((s) => s.updateDeal);
-  const submitUrl = rateSubmissionUrl(deal);
+  return (
+    <div className="grid cols-2">
+      <TextField
+        label="Delivered on"
+        value={deal.deliveredOn}
+        placeholder="YYYY-MM-DD"
+        onChange={(deliveredOn) => updateDeal(deal.id, { deliveredOn })}
+        hint={deal.seal ? '' : 'Once this is set the deal can no longer be sealed.'}
+      />
+      <TextField
+        label="Invoice paid on"
+        value={deal.paidOn}
+        placeholder="YYYY-MM-DD"
+        onChange={(paidOn) => updateDeal(deal.id, { paidOn })}
+      />
+    </div>
+  );
+}
 
+/** Whether the deal is sealed, and if not, whether it still can be. */
+function RightsNote({ deal }: { deal: Deal }) {
+  if (deal.seal) {
+    return (
+      <p className="note">
+        <Pill tone="good">sealed</Pill> Serial {deal.seal.serial}, timestamped{' '}
+        {deal.seal.timestampedAt}. Deliver the sealed file, not the original.
+      </p>
+    );
+  }
+  if (deal.deliveredOn) {
+    return (
+      <p className="note">
+        Not sealed, and delivered, so it can no longer be. The contract is the evidence for this
+        deal.
+      </p>
+    );
+  }
+  return (
+    <p className="note">
+      Not sealed. To establish rights, run <code>sponsorable seal {deal.id} your-file.png</code>{' '}
+      before delivering. Sealing is optional and cannot be done after delivery.
+    </p>
+  );
+}
+
+/** The opt-in link that contributes a won deal's rounded figures to the benchmarks. */
+function RateSubmission({ url }: { url: string }) {
   return (
     <>
-      <div className="grid cols-2">
-        <TextField
-          label="Delivered on"
-          value={deal.deliveredOn}
-          placeholder="YYYY-MM-DD"
-          onChange={(deliveredOn) => updateDeal(deal.id, { deliveredOn })}
-          hint={deal.seal ? '' : 'Once this is set the deal can no longer be sealed.'}
-        />
-        <TextField
-          label="Invoice paid on"
-          value={deal.paidOn}
-          placeholder="YYYY-MM-DD"
-          onChange={(paidOn) => updateDeal(deal.id, { paidOn })}
-        />
-      </div>
+      <h3>Help the benchmarks</h3>
+      <p className="note">
+        Opens the rate-data form on GitHub, filled in with rounded figures: no brand, no handle, no
+        exact numbers or dates. The figures travel to GitHub in the page address as soon as it
+        opens. Nothing is posted until you press submit there.
+      </p>
+      <a className="btn" href={url} target="_blank" rel="noopener noreferrer">
+        Submit this rate anonymously
+      </a>
+    </>
+  );
+}
 
+/** Rights, delivery and sightings for a won deal. */
+function WonDetail({ deal, today }: { deal: Deal; today: string }) {
+  const submitUrl = rateSubmissionUrl(deal);
+  return (
+    <>
+      <DeliveryDates deal={deal} />
       <h3>Rights</h3>
-      {deal.seal ? (
-        <p className="note">
-          <Pill tone="good">sealed</Pill> Serial {deal.seal.serial}, timestamped{' '}
-          {deal.seal.timestampedAt}. Deliver the sealed file, not the original.
-        </p>
-      ) : deal.deliveredOn ? (
-        <p className="note">
-          Not sealed, and delivered, so it can no longer be. The contract is the evidence for
-          this deal.
-        </p>
-      ) : (
-        <p className="note">
-          Not sealed. To establish rights, run <code>sponsorable seal {deal.id} your-file.png</code>{' '}
-          before delivering. Sealing is optional and cannot be done after delivery.
-        </p>
-      )}
-
+      <RightsNote deal={deal} />
       <h3>Sightings</h3>
       {deal.sightings.map((sighting) => (
         <SightingLine key={sighting.id} deal={deal} sighting={sighting} />
       ))}
       <SightingForm deal={deal} today={today} />
-
-      {submitUrl && (
-        <>
-          <h3>Help the benchmarks</h3>
-          <p className="note">
-            Opens the rate-data form on GitHub, filled in with rounded figures: no brand, no handle,
-            no exact numbers or dates. The figures travel to GitHub in the page address as soon as
-            it opens. Nothing is posted until you press submit there.
-          </p>
-          <a className="btn" href={submitUrl} target="_blank" rel="noopener noreferrer">
-            Submit this rate anonymously
-          </a>
-        </>
-      )}
+      {submitUrl && <RateSubmission url={submitUrl} />}
     </>
+  );
+}
+
+/** The deal's headline: brand, outcome, badges, and what was agreed against the quote. */
+function DealSummary({ deal }: { deal: Deal }) {
+  const won = deal.outcome === 'won';
+  const ratio = won && deal.quoted > 0 ? Math.round((deal.agreed / deal.quoted) * 100) : null;
+  return (
+    <div className="spread">
+      <div style={{ minWidth: 0 }}>
+        <div className="row" style={{ gap: 8 }}>
+          <strong>{deal.brand || 'Unnamed brand'}</strong>
+          <Pill tone={won ? 'good' : 'plain'}>
+            {won ? 'won' : `lost: ${LOST_LABEL[deal.lostReason ?? 'other']}`}
+          </Pill>
+          {deal.seal && <Pill tone="accent">sealed</Pill>}
+          {deal.sightings.length > 0 && <Pill tone="warn">{deal.sightings.length} sighted</Pill>}
+        </div>
+        <div className="note" style={{ marginTop: 3 }}>
+          {FORMAT_LABEL[deal.format]} on {PLATFORM_LABEL[deal.platform]} · closed {deal.closedOn}
+        </div>
+      </div>
+      <div style={{ textAlign: 'right', minWidth: 96 }}>
+        <div className="price">{won ? money(deal.agreed) : '—'}</div>
+        <div className="band">
+          quoted {money(deal.quoted)}
+          {ratio !== null ? ` · ${ratio}%` : ''}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -168,39 +207,15 @@ export function DealRow({ deal, today }: { deal: Deal; today: string }) {
   const removeDeal = useStore((s) => s.removeDeal);
   const updateDeal = useStore((s) => s.updateDeal);
   const won = deal.outcome === 'won';
-  const ratio = won && deal.quoted > 0 ? Math.round((deal.agreed / deal.quoted) * 100) : null;
 
   return (
     <div className="prospect">
-      <div className="spread">
-        <div style={{ minWidth: 0 }}>
-          <div className="row" style={{ gap: 8 }}>
-            <strong>{deal.brand || 'Unnamed brand'}</strong>
-            <Pill tone={won ? 'good' : 'plain'}>
-              {won ? 'won' : `lost: ${LOST_LABEL[deal.lostReason ?? 'other']}`}
-            </Pill>
-            {deal.seal && <Pill tone="accent">sealed</Pill>}
-            {deal.sightings.length > 0 && <Pill tone="warn">{deal.sightings.length} sighted</Pill>}
-          </div>
-          <div className="note" style={{ marginTop: 3 }}>
-            {FORMAT_LABEL[deal.format]} on {PLATFORM_LABEL[deal.platform]} · closed {deal.closedOn}
-          </div>
-        </div>
-        <div style={{ textAlign: 'right', minWidth: 96 }}>
-          <div className="price">{won ? money(deal.agreed) : '—'}</div>
-          <div className="band">
-            quoted {money(deal.quoted)}
-            {ratio !== null ? ` · ${ratio}%` : ''}
-          </div>
-        </div>
-      </div>
-
+      <DealSummary deal={deal} />
       <div className="row" style={{ marginTop: 11 }}>
         <button className="disclosure" onClick={() => setOpen(!open)} aria-expanded={open}>
           {open ? 'Close' : won ? 'Delivery, rights and sightings' : 'Details'}
         </button>
       </div>
-
       {open && (
         <div style={{ marginTop: 12, borderTop: '1px solid var(--line-soft)', paddingTop: 12 }}>
           {won && <WonDetail deal={deal} today={today} />}

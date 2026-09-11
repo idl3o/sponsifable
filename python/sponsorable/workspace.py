@@ -20,6 +20,7 @@ FIRST_WITH_DEALS = 2
 
 
 def load(path: Path) -> dict[str, Any]:
+    """Read a workspace file, refusing a format this CLI does not understand."""
     data = json.loads(path.read_text(encoding="utf-8"))
     version = data.get("version", 1)
     if version > SUPPORTED_VERSION:
@@ -30,10 +31,12 @@ def load(path: Path) -> dict[str, Any]:
 
 
 def find_deal(data: dict[str, Any], deal_id: str) -> dict[str, Any] | None:
+    """The deal with this id, or None."""
     return next((d for d in data.get("deals", []) if d.get("id") == deal_id), None)
 
 
 def find_by_serial(data: dict[str, Any], serial: str) -> dict[str, Any] | None:
+    """The deal sealed under this serial, or None."""
     return next((d for d in data.get("deals", []) if (d.get("seal") or {}).get("serial") == serial), None)
 
 

@@ -23,6 +23,7 @@ def home_dir() -> Path:
 
 
 def ledger_dir(home: Path) -> Path:
+    """The ledger folder under the home directory, created if missing."""
     path = home / "ledger"
     path.mkdir(parents=True, exist_ok=True)
     return path
@@ -41,11 +42,13 @@ def entries(home: Path) -> Iterator[dict[str, Any]]:
 
 
 def find_serial(home: Path, serial: str) -> dict[str, Any] | None:
+    """The seal record for a serial, or None if this creator never issued it."""
     path = ledger_dir(home) / f"{serial}.json"
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
 def has_deal(home: Path, deal_id: str) -> bool:
+    """True when any seal in the ledger belongs to this deal."""
     return any(e["receipt"]["dealId"] == deal_id for e in entries(home))
 
 

@@ -264,6 +264,49 @@ export function marketReference(channel: Channel, format: Format, organic: numbe
   return { typical, followers: channel.followers, position, sentence };
 }
 
+/** The product of a list of adjustments' factors. */
+function product(list: Adjustment[]): number {
+  return list.reduce((acc, a) => acc * a.factor, 1);
+}
+
+/** A placement priced before paid usage, with everything the rate line reports. */
+interface OrganicPrice {
+  cpm: number;
+  impressions: number;
+  adjustments: Adjustment[];
+  /** What the audience alone is worth, terms included. */
+  media: number;
+  /** The production floor, scaled by the terms. Zero for an unsellable placement. */
+  production: number;
+  /** The greater of the two. */
+  organic: number;
+}
+
+/**
+ * The price before paid usage: the greater of what the audience is worth and
+ * what the work costs to make. Terms scale the labour cost too, since an
+ * exclusive, rushed piece is still more work. Audience multipliers do not,
+ * since the floor is about the work.
+ */
+function organicPrice(profile: CreatorProfile, channel: Channel, format: Format, terms: DealTerms): OrganicPrice {
+  const cpm = baseCpm(channel.platform, format);
+  const impressions = Math.max(0, Math.round(channel.medianViews));
+  const audience = audienceAdjustments(profile, channel);
+  const commercial = termsAdjustments(profile, terms);
+  const termsFactor = product(commercial);
+  const media = (impressions / 1000) * cpm * product(audience) * termsFactor;
+  const sellable = cpm > 0 && impressions > 0;
+  const production = sellable ? PRODUCTION_FLOOR[format] * termsFactor : 0;
+  return {
+    cpm,
+    impressions,
+    adjustments: [...audience, ...commercial],
+    media,
+    production,
+    organic: Math.max(media, production),
+  };
+}
+
 /**
  * Price a single placement.
  *
@@ -277,33 +320,13 @@ export function priceLine(
   format: Format,
   terms: DealTerms = DEFAULT_TERMS,
 ): RateLine {
-  const cpm = baseCpm(channel.platform, format);
-  const impressions = Math.max(0, Math.round(channel.medianViews));
-  const audience = audienceAdjustments(profile, channel);
-  const commercial = termsAdjustments(profile, terms);
-  const product = (list: Adjustment[]) => list.reduce((acc, a) => acc * a.factor, 1);
-
-  // Terms scale the labour cost too: an exclusive, rushed piece is still more
-  // work. Audience multipliers do not, since the floor is about the work.
-  const termsFactor = product(commercial);
-  const media = (impressions / 1000) * cpm * product(audience) * termsFactor;
-  const sellable = cpm > 0 && impressions > 0;
-  const production = sellable ? PRODUCTION_FLOOR[format] * termsFactor : 0;
-  const organic = Math.max(media, production);
+  const { cpm, impressions, adjustments, media, production, organic } = organicPrice(profile, channel, format, terms);
 
   // Paid usage is priced on the organic price, then applied to both numbers
   // alike so the derivation still reads as one list of factors.
   const usage = usageFee(terms, organic);
   const usageFactor = organic > 0 ? 1 + usage.fee / organic : 1;
-  const adjustments = [...audience, ...commercial];
-  if (usage.fee > 0) {
-    adjustments.push({
-      label: `Usage rights: ${terms.usageRights.replace(/-/g, ' ')}`,
-      factor: usageFactor,
-      rationale: usage.rationale,
-    });
-  }
-
+  const usageLine = { label: `Usage rights: ${terms.usageRights.replace(/-/g, ' ')}`, factor: usageFactor, rationale: usage.rationale };
   const mediaValue = media * usageFactor;
   const productionFloor = production * usageFactor;
   return {
@@ -312,7 +335,7 @@ export function priceLine(
     format,
     effectiveImpressions: impressions,
     baseCpm: cpm,
-    adjustments,
+    adjustments: usage.fee > 0 ? [...adjustments, usageLine] : adjustments,
     mediaValue: roundToNegotiable(mediaValue),
     productionFloor: roundToNegotiable(productionFloor),
     flooredByProduction: production > media,
@@ -321,7 +344,7 @@ export function priceLine(
     // price never drops beneath it however small the audience.
     floor: roundToNegotiable(Math.max(mediaValue * 0.78, productionFloor)),
     stretch: roundToNegotiable(Math.max(mediaValue * 1.35, productionFloor * 1.25)),
-    introductory: commercial.some((a) => a.label === 'Introductory rate'),
+    introductory: adjustments.some((a) => a.label === 'Introductory rate'),
     market: marketReference(channel, format, organic),
   };
 }
