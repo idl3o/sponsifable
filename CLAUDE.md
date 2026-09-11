@@ -34,7 +34,8 @@
 
 - `tsconfig` runs `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`. Optional props are spread conditionally (`{...(hint ? { hint } : {})}`) rather than passed as `undefined`. Array indexing needs a guard.
 - Heredocs in this repo choke on the pricing/component files. Use the Write tool for anything with template literals and nested quotes.
-- Vitest runs `.test.ts` in node and `.test.tsx` in jsdom via `environmentMatchGlobs`. Component tests must stub `fetch` (the Ollama probe) and `window.print`.
+- Vitest runs `.test.ts` in node and `.test.tsx` in jsdom as two projects in `vite.config.ts`, because Vitest 4 removed `environmentMatchGlobs`. Component tests must stub `fetch` (the Ollama probe) and `window.print`.
+- **npm 11.4.2 crashes resolving Vitest 4's peers** (`Cannot read properties of null (reading 'edgesOut')`), even from a clean tree. Installing from the lockfile works. To change a dependency, use a newer npm: `npx -y npm@11.19.1 install`. It skips esbuild's postinstall, which is harmless because the platform binary arrives as an optional dependency.
 - `updateChannel` resets `formats` when the platform changes. That is deliberate: a YouTube format list on a TikTok channel prices nonsense.
 - The play test (`node scripts/playtest.mjs`) drives the installed Chrome via `channel: 'chrome'`, because the bundled Playwright build does not match the browsers on this machine. Do not swap it back to `chromium.launch()` without running `npx playwright install`.
 - Channel cards and proof points both render a button labelled "Remove". Any selector for one must exclude the other.
