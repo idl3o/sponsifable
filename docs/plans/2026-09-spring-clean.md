@@ -26,6 +26,26 @@ Each phase is its own commit. The test suites and the typecheck pass after every
 7. **Truth pass.** Bring the README, CONTRIBUTING, RELEASING and CLAUDE.md into line with the code: test counts, the Vitest gotcha, the archive. Record the OBS pivot in CLAUDE.md as a dated decision. The README says nothing about the OBS tool until something ships.
 8. **Local tidy.** Delete ignored build output and caches: `dist/`, `python/dist/`, `__pycache__/` and `.pytest_cache/`. All of it regenerates. Keep `.venv` and `node_modules`.
 
+## Outcome (2026-09-11)
+
+Every phase is done, on `chore/spring-clean`. Lint went in before the refactor so the refactored code was checked as it was written, but it is committed after it, so each commit passes on its own.
+
+| Phase | Commit |
+|---|---|
+| Park the sandbox | 702b9a1 on `sandbox/lightning`; the worktree folder is removed |
+| Archive library | 0ec47ff |
+| Toolchain security | 3be5daa: audit clean |
+| CI on push | 9b32566 |
+| House rules | 545d6b3: no function over 50 lines; every export documented |
+| Lint | 661e733: in CI and in the release workflow |
+| Truth pass | 081ed70 |
+| Local tidy | nothing to commit; the bundled web app was rebuilt from current code |
+
+Found along the way:
+
+- npm 11.4.2 crashes resolving Vitest 4's peers, and strips the lockfile's `libc` fields. Use npm 11.19.1 for anything that writes the lockfile. This is recorded in CLAUDE.md.
+- A preview server started for screenshots outlived its task and held the worktree folder open. On Windows, stop the `node` and `esbuild` children too.
+
 ## Deliberately out of scope
 
 - **Framework majors.** React 19, zustand 5, immer 11 and TypeScript 7 would each change behaviour or tooling. None is a security fix. Take them with the restructure, when the UI is changing anyway.
