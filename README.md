@@ -84,7 +84,7 @@ See [CONTRIBUTING.md](https://github.com/idl3o/sponsorable/blob/main/CONTRIBUTIN
 
 ## Running it
 
-Sponsorable is not on PyPI yet. From a checkout, with Node 20+ and Python 3.10+:
+Sponsorable is not on PyPI yet. From a checkout, with Node 20.19+ or 22.12+ and Python 3.10+:
 
 ```bash
 npm install
@@ -107,6 +107,7 @@ For development:
 npm run dev        # http://localhost:5180
 npm test           # 114 tests, including the calibration sweep
 npm run typecheck
+npm run lint       # includes the house rules: no function over 50 lines
 python -m pytest   # 43 tests: receipts, SSH signatures, timestamps, seal and verify
 
 node scripts/playtest.mjs   # drives real Chrome, screenshots every tab,
@@ -136,8 +137,8 @@ src/store/       zustand and immer, persisted to localStorage
 src/components/  one view per tab
 python/          the `sponsorable` CLI: serve, seal, verify
   receipt.py       pure: the receipt, its commitment, and the rules a claim must pass
-docs/            provenance design
-scripts/         browser play test, watermark survival test
+docs/            provenance design, the research behind the benchmarks, and an archive of papers
+scripts/         browser play test, watermark survival test, archive renderer
 ```
 
 React 18, TypeScript in strict mode, Vite, vitest, zustand. No CSS framework and no component library, so there is nothing to learn before changing something.

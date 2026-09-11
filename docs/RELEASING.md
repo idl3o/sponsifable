@@ -38,7 +38,7 @@ Everything is public and permanent once it reaches PyPI. A version number, once 
 
 ## What the workflow checks before anything is uploaded
 
-- typecheck, vitest, and pytest, which includes the SSHSIG interoperability tests against the runner's OpenSSH
+- typecheck, lint, vitest and pytest, which includes the SSHSIG interoperability tests against the runner's OpenSSH
 - that the tag, the Python package and the app all carry the same version
 - `twine check --strict` on the built files
 - that the wheel actually contains the web app, since it is gitignored and only included deliberately

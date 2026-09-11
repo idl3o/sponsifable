@@ -34,6 +34,7 @@ Run the suite. It is fast.
 npm install
 npm test           # 114 tests
 npm run typecheck
+npm run lint
 node scripts/playtest.mjs
 python -m pytest   # 43 tests, if you touch python/
 ```
@@ -74,7 +75,7 @@ Comments should say why, not what. The existing code is a reasonable guide: it e
 
 ### Pull requests
 
-Say what changed and what it does to the numbers. If you touched pricing, paste the calibration table before and after. Tests and typecheck must pass. New behaviour needs a test, and a bug fix needs a test that fails without it.
+Say what changed and what it does to the numbers. If you touched pricing, paste the calibration table before and after. Tests, typecheck and lint must pass. Lint carries the house style: no function over 50 lines, no module over 500. New behaviour needs a test, and a bug fix needs a test that fails without it.
 
 ## 3. Things that would genuinely help, beyond rates
 

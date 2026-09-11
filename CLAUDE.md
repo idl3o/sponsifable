@@ -14,6 +14,7 @@
 - **The paid-market reference is shown, never priced.** `MARKET_PAY` (Smith 2026, pay proportional to followers^0.489) sits beside the price for Instagram and TikTok main formats only. Do not feed it into `target`, and do not extend it to platforms the paper does not cover. The calibration sweep also asserts each covered archetype stays within 3x of it.
 - **Paid usage is per 30-day period**, as `max(share × organic, minimum)` per period, or the declared-spend share where that is larger. A buyout is the placement again, never below six periods at the minimum. The overrun invoice uses the same per-period rate.
 - **The introductory rate lapses with the first result.** `hasResults(profile)` gates it inside the pricing engine, not just the UI, and the pitch names it as a trade. It is the only path that prices below the production floor.
+- **Direction, 2026-09-11: a full pivot to an OBS tool for streamers.** It covers everything both sides of *one* sponsorship deal need: an offer evaluator over the existing engine, the sponsor overlay as an OBS browser source served by the local server, an on-screen log read from OBS's built-in WebSocket (not timed in the overlay page), a signed delivery report, and payment. Still not a marketplace: matchmaking belongs to StreamElements and Twitch's Sponsorship Dashboard. The work starts on its own branch after the spring clean. It moves the source of truth from browser storage to the workspace file, because OBS's embedded browser keeps separate storage, and it replaces the audience line below deliberately rather than by drift.
 - **The first audience is the low-budget, self-hosting, technical creator.** Tech, B2B and developer-tools creators, newsletter writers, maintainers with an audience. Distribution is one `pipx install` that serves the app on localhost and carries the `seal` CLI. Do not claim to serve UGC creators generally until the tool reaches people who will not open a terminal.
 
 ### Provenance (see `docs/provenance.md`)
@@ -35,7 +36,7 @@
 - `tsconfig` runs `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`. Optional props are spread conditionally (`{...(hint ? { hint } : {})}`) rather than passed as `undefined`. Array indexing needs a guard.
 - Heredocs in this repo choke on the pricing/component files. Use the Write tool for anything with template literals and nested quotes.
 - Vitest runs `.test.ts` in node and `.test.tsx` in jsdom as two projects in `vite.config.ts`, because Vitest 4 removed `environmentMatchGlobs`. Component tests must stub `fetch` (the Ollama probe) and `window.print`.
-- **npm 11.4.2 crashes resolving Vitest 4's peers** (`Cannot read properties of null (reading 'edgesOut')`), even from a clean tree. Installing from the lockfile works. To change a dependency, use a newer npm: `npx -y npm@11.19.1 install`. It skips esbuild's postinstall, which is harmless because the platform binary arrives as an optional dependency.
+- **npm 11.4.2 crashes resolving Vitest 4's peers** (`Cannot read properties of null (reading 'edgesOut')`), even from a clean tree. Installing from the lockfile works. To change a dependency, or anything else that rewrites the lockfile, use a newer npm: `npx -y npm@11.19.1 install`. npm 11.4.2 also strips the `libc` fields that pick glibc or musl binaries on Linux CI. It skips esbuild's postinstall, which is harmless because the platform binary arrives as an optional dependency.
 - `updateChannel` resets `formats` when the platform changes. That is deliberate: a YouTube format list on a TikTok channel prices nonsense.
 - The play test (`node scripts/playtest.mjs`) drives the installed Chrome via `channel: 'chrome'`, because the bundled Playwright build does not match the browsers on this machine. Do not swap it back to `chromium.launch()` without running `npx playwright install`.
 - Channel cards and proof points both render a button labelled "Remove". Any selector for one must exclude the other.
@@ -47,6 +48,10 @@
 - **`npm run bundle` before building the wheel.** The web app is gitignored inside the package and is included only via hatch `artifacts`. A git install without it serves an error telling you so.
 - **The ledger holds four files per serial.** Only `<10 hex>.json` is a seal record; `ledger.entries()` matches that pattern, because `<serial>.receipt.json` sits beside it.
 - `python -m pytest` needs the repo venv (`.venv`, created with `--system-site-packages` to reuse the installed torch). Tests fake the watermark and the timestamp authority; `python/tests/fixtures/digicert-probe.tsr` is a real token over SHA-256("sponsorable api probe") for offline token tests.
+
+## Archive
+
+`docs/archive/` holds dated papers as Markdown, the source of truth; `scripts/archive/render.py` draws each into a page under `dist/archive/`. Titles name the idea, not the product, while the name is under review. A published paper takes errata, not edits. See `docs/archive/README.md`.
 
 ## Calibration
 
