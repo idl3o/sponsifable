@@ -93,10 +93,23 @@ The report is signed like the existing receipts, with the creator's SSH key, and
 
 ## Next test
 
-The riskiest assumption is that OBS reports a browser source's program activity reliably, including in studio mode and inside nested scenes. Testing it takes three steps:
+The riskiest assumption is that OBS reports a browser source's program activity reliably, including in studio mode and inside nested scenes. `scripts/obs_probe.py` tests it. It prints each relevant event with a UTC time, polls the source every two seconds of quiet, and flags every poll that disagrees with the events.
 
-1. Switch the WebSocket server on in OBS (Tools, then WebSocket Server Settings).
-2. Add a browser source to a scene.
-3. Run a probe that logs the events and the polls side by side while the scene is switched, the source toggled, and studio mode used.
+1. Switch the WebSocket server on in OBS (Tools, then WebSocket Server Settings), and copy the password.
+2. Add a browser source named "Sponsor overlay" to a scene. Any URL will do.
+3. Run the probe, and paste the password when asked:
 
-That probe is the first thing to build on this branch.
+   ```bash
+   python scripts/obs_probe.py --source "Sponsor overlay" --log probe.jsonl
+   ```
+
+4. Start a stream, or a test stream to a throwaway key, then work through the cases:
+   - switch scenes;
+   - toggle the source's eye;
+   - put the source in a nested scene;
+   - use studio mode, with the source in preview and then in program;
+   - reload the browser source.
+
+5. Stop with Ctrl+C. The summary counts the on-air intervals and the disagreements.
+
+No disagreements across those cases means the events can be billed against, with the poll kept as a guard. Any disagreement is a finding for this note, and the poll then has to carry the log.
