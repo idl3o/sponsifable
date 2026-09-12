@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { FORMAT_LABEL, PLATFORM_LABEL } from '../domain/benchmarks';
 import { priceOverrun, rateSubmissionUrl } from '../domain/deals';
+import { overlayUrl } from '../domain/overlay';
 import type { Deal, Sighting } from '../domain/types';
+import { useSyncStatus } from '../store/sync';
 import { useStore } from '../store/useStore';
 import { Button, Pill, TextField, copyText, money } from './ui/Primitives';
 
@@ -153,12 +155,38 @@ function RateSubmission({ url }: { url: string }) {
   );
 }
 
+/** The OBS browser source that puts the ad label on stream. */
+function OnStream({ deal }: { deal: Deal }) {
+  const served = useSyncStatus((s) => s.mode === 'file');
+  const [copied, setCopied] = useState(false);
+  const url = overlayUrl(window.location.origin, deal.id);
+  return (
+    <>
+      <h3>On stream</h3>
+      <p className="note">
+        Add this address to OBS as a browser source. It shows the ad label and the sponsor's name,
+        reads this workspace, and needs no OBS permissions.
+      </p>
+      <div className="row" style={{ marginBottom: 14 }}>
+        <Button
+          disabled={!served}
+          title={served ? url : 'Needs `sponsorable serve`: OBS keeps its own browser storage, so the overlay reads the workspace file.'}
+          onClick={() => void copyText(url).then(setCopied)}
+        >
+          {copied ? 'Copied' : 'Copy OBS URL'}
+        </Button>
+      </div>
+    </>
+  );
+}
+
 /** Rights, delivery and sightings for a won deal. */
 function WonDetail({ deal, today }: { deal: Deal; today: string }) {
   const submitUrl = rateSubmissionUrl(deal);
   return (
     <>
       <DeliveryDates deal={deal} />
+      <OnStream deal={deal} />
       <h3>Rights</h3>
       <RightsNote deal={deal} />
       <h3>Sightings</h3>

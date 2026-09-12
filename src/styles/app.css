@@ -317,6 +317,13 @@ button.btn.ghost:hover {
   background: #241a19;
 }
 
+button.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: none;
+  border-color: var(--line);
+}
+
 /* ---------- stat ---------- */
 
 .stat {

@@ -151,15 +151,17 @@ export function Button({
   onClick,
   variant = 'default',
   title,
+  disabled = false,
 }: {
   children: ReactNode;
   onClick: () => void;
   variant?: 'default' | 'primary' | 'ghost';
   title?: string;
+  disabled?: boolean;
 }) {
   const cls = variant === 'default' ? 'btn' : `btn ${variant}`;
   return (
-    <button type="button" className={cls} onClick={onClick} title={title ?? ''}>
+    <button type="button" className={cls} onClick={onClick} title={title ?? ''} disabled={disabled}>
       {children}
     </button>
   );

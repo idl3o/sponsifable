@@ -7,6 +7,8 @@ export default defineConfig({
   // `npm run dev:api` serves the workspace on 5181. Without it, /api fails and
   // the app runs from this browser's copy alone.
   server: { port: 5180, proxy: { '/api': { target: 'http://127.0.0.1:5181', changeOrigin: true } } },
+  // The OBS overlay is its own page, so a browser source loads nothing of the app.
+  build: { rollupOptions: { input: { app: 'index.html', overlay: 'overlay.html' } } },
   test: {
     // Domain tests run in node; component tests need a DOM. Vitest 4 dropped
     // environmentMatchGlobs, so the split is two projects sharing this config.
