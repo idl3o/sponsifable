@@ -16,7 +16,7 @@
   <div style="position: relative; width: 405px; height: 720px; overflow: hidden; background: radial-gradient(140% 80% at 40% 25%, #1f2d3f 0%, #0f1620 55%, #07090d 100%);">
     <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 300px; background: linear-gradient(180deg, #111a25 0%, #090c11 100%);"></div>
     <div style="position: absolute; left: 40px; bottom: 260px; width: 330px; height: 190px; background: #16202d; clip-path: polygon(0 100%, 34% 24%, 55% 0, 76% 32%, 100% 100%);"></div>
-    <div style="position: absolute; left: 118px; top: 96px; display: flex; align-items: center; gap: 9px; padding: 8px 11px; background: #f4f1ea; border-radius: 8px;">
+    <div style="position: absolute; left: 118px; top: 470px; display: flex; align-items: center; gap: 9px; padding: 8px 11px; background: #f4f1ea; border-radius: 8px;">
       <div style="width: 28px; height: 28px; border-radius: 5px; background: #1b2a3b;"></div>
       <div style="display: flex; flex-direction: column; gap: 1px;">
         <div style="font-size: 12.5px; font-weight: 700; color: #14171d;">[SPONSOR]</div>
@@ -71,7 +71,7 @@
           <div style="font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: #c9d0db;">kernow.build/m/1432</div>
         </div>
         <sc-if value="{{showQr}}" hint-placeholder-val="{{ true }}">
-          <svg width="58" height="58" viewBox="0 0 76 76" style="flex: none;">
+          <svg width="68" height="68" viewBox="0 0 76 76" style="flex: none;">
             <rect width="76" height="76" rx="4" fill="#ffffff"></rect>
             <g fill="#0d0f13">
               <rect x="6" y="6" width="20" height="20"></rect><rect x="10" y="10" width="12" height="12" fill="#ffffff"></rect><rect x="13" y="13" width="6" height="6"></rect>
@@ -99,8 +99,8 @@
 class Component extends DCLogic {
   renderVals() {
     const positions = {
-      'upper-left': 'left: 14px; top: 150px;',
-      'middle-left': 'left: 14px; top: 400px;',
+      'upper-left': 'left: 14px; top: 96px;',
+      'middle-left': 'left: 14px; top: 230px;',
       bottom: 'left: 14px; bottom: 34px;',
     };
     const position = this.props.position ?? 'middle-left';

@@ -4,12 +4,17 @@ Design sources for the creator's visible mark on clip previews: the board that a
 
 ## Decisions
 
-- **Two marks, two jobs.** The invisible mark is forensic: a serial per licence, applied when the sponsor activates the licence, never before. The visible board appears on previews only. It advertises the shop and deters use of the preview. Visible-watermark removal tools are common, so it is deterrence, not protection.
-- **The creator designs the board. The tool always adds the PREVIEW label and the link.** The mark can be a monogram, an uploaded logo, or a whole board image. An uploaded image sits beside the label and the link, and never replaces them.
+- **Two marks, two jobs.** The invisible mark is forensic: a serial per licence, applied when the sponsor activates the licence and after the creator confirms, never before. A missing mark proves nothing, and it does not survive reframing. The visible board appears on previews only. It advertises the shop and deters use of the preview. Visible-watermark removal tools are common, so it is deterrence, not protection.
+- **The creator designs the board. The tool always adds the PREVIEW label, and on public previews the link.** The mark can be a monogram, an uploaded logo, or a whole board image. An uploaded image sits beside the label and the link, and never replaces them.
 - **Nothing in the pixels goes stale.** No price appears on the board, because prices change and pixels do not; the link shows the current price. The link points to the creator's own domain. There is no project-run shortener, which would count clicks. The link has to outlive any host the creator might leave.
 - **The vertical board keeps clear of the app's own UI.** On 9:16 the board stays out of the top bar, the right-hand buttons and the caption area, and the editor flags a position that falls under them.
 - **Sponsored moments go only to their sponsor.** They carry a private board, "Preview for [sponsor]", and are sent with the delivery report. Only moments with no sponsor in them are listed publicly.
 - **The licensed copy is clean.** No board and no pattern, only the invisible serial.
+
+## Where the build moved the design
+
+- **The vertical positions anchor to the app's UI.** "Upper" sits just under the top bar, and "middle" sits just above the button column. There the board's width cannot run into the buttons. The first draft's middle position, at y 400, collided once the QR code grew to a scannable size.
+- **The QR code is sized to scan.** It is 92 units on the landscape frame and 68 on the vertical one, which gives at least 3 px a module on the exported 720p previews with the quiet zone included. The editor warns when a longer link makes the code too dense.
 
 ## Checks the editor runs
 
