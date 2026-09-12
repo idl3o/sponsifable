@@ -1,3 +1,4 @@
+import { PRODUCT } from '../brand';
 import { FORMAT_LABEL, NICHE_LABEL, PAID_USAGE, PAID_USAGE_DAYS, PLATFORM_LABEL } from './benchmarks';
 import { daysBetween, gbp } from './pitch';
 import { hasGeo, normaliseGeo, periodFee, priceLine, roundHard, roundToNegotiable } from './pricing';
@@ -207,7 +208,7 @@ export function rateSubmissionUrl(deal: Deal): string | null {
     exclusivity: deal.terms.exclusivityDays > 0 ? `${deal.terms.exclusivityDays} days` : 'none',
     when: quarterOf(deal.closedOn),
     source: deal.paidOn ? 'Mine, money received' : 'Mine, agreed but not yet paid',
-    notes: `Submitted from the Sponsorable deal log. The tool quoted ${gbp(roundHard(deal.quoted))}${deal.flooredByProduction ? ', set by the production floor rather than reach' : ''}.`,
+    notes: `Submitted from the ${PRODUCT} deal log. The tool quoted ${gbp(roundHard(deal.quoted))}${deal.flooredByProduction ? ', set by the production floor rather than reach' : ''}.`,
   });
   return `${REPO_URL}/issues/new?${params.toString()}`;
 }

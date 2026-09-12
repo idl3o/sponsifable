@@ -1,3 +1,4 @@
+import { PRODUCT } from '../brand';
 import { FORMATS_BY_PLATFORM, NICHE_LABEL } from './benchmarks';
 import { DEFAULT_BOARD, MAX_IMAGE_CHARS, PATTERN_RANGE } from './board';
 import { paidDaysFor } from './deals';
@@ -313,7 +314,7 @@ export function parseWorkspace(input: unknown): ParseResult {
     const version = num(o.version, 'version', 1);
     if (version > WORKSPACE_VERSION) {
       throw new Invalid(
-        `this file is from a newer version of Sponsorable (format ${version}); update before importing it`,
+        `this file is from a newer version of ${PRODUCT} (format ${version}); update before importing it`,
       );
     }
     return {

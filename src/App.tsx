@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { PRODUCT, TAGLINE } from './brand';
 import { BoardView } from './components/board/BoardView';
 import { DealsView } from './components/DealsView';
 import { MediaKitView } from './components/MediaKitView';
@@ -106,8 +107,8 @@ export function App() {
     <div className="shell">
       <header className="topbar">
         <div className="brand">
-          Sponsorable
-          <span>price it, prove it, pitch it</span>
+          {PRODUCT}
+          <span>{TAGLINE}</span>
         </div>
 
         <div className="tabs" role="tablist">

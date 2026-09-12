@@ -32,6 +32,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
 from . import sshsig
+from .brand import PRODUCT
 
 _PKCS8 = (serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
 
@@ -141,7 +142,7 @@ def allowed_signers_line(identity: str, public_key: str) -> str:
 
 def _name(common: str) -> x509.Name:
     return x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, common), x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Sponsorable")]
+        [x509.NameAttribute(NameOID.COMMON_NAME, common), x509.NameAttribute(NameOID.ORGANIZATION_NAME, PRODUCT)]
     )
 
 
@@ -189,9 +190,9 @@ def c2pa_credentials(home: Path, creator: str) -> tuple[bytes, bytes]:
     home.mkdir(parents=True, exist_ok=True)
     now = dt.datetime.now(dt.timezone.utc)
     root_key, leaf_key = ec.generate_private_key(ec.SECP256R1()), ec.generate_private_key(ec.SECP256R1())
-    root_name = _name("Sponsorable local root (not a trusted CA)")
+    root_name = _name(f"{PRODUCT} local root (not a trusted CA)")
     root = _cert(root_name, root_name, root_key.public_key(), root_key, ca=True, now=now)
-    leaf = _cert(_name(creator or "Sponsorable creator"), root_name, leaf_key.public_key(), root_key, ca=False, now=now)
+    leaf = _cert(_name(creator or f"{PRODUCT} creator"), root_name, leaf_key.public_key(), root_key, ca=False, now=now)
     chain = leaf.public_bytes(serialization.Encoding.PEM) + root.public_bytes(serialization.Encoding.PEM)
     chain_path.write_bytes(chain)
     key_path.write_bytes(leaf_key.private_bytes(*_PKCS8))
