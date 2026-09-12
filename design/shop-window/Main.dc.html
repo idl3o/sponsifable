@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; background: #0d0f13; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #e2b658; } a:hover { color: #eec267; }
+  </style>
+</helmet>
+<div style="width: 960px; height: 596px; display: flex; flex-direction: column; background: #0d0f13;">
+  <div style="position: relative; width: 960px; height: 540px; overflow: hidden; background: radial-gradient(120% 95% at 28% 18%, #1f2d3f 0%, #0f1620 52%, #07090d 100%);">
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 205px; background: linear-gradient(180deg, #111a25 0%, #090c11 100%);"></div>
+    <div style="position: absolute; left: 90px; bottom: 170px; width: 300px; height: 150px; background: #1a2636; clip-path: polygon(0 100%, 38% 12%, 62% 40%, 100% 100%);"></div>
+    <div style="position: absolute; left: 430px; bottom: 170px; width: 420px; height: 210px; background: #16202d; clip-path: polygon(0 100%, 30% 30%, 52% 0, 74% 36%, 100% 100%);"></div>
+    <div style="position: absolute; left: 380px; bottom: 60px; width: 200px; height: 110px; background: #223247; clip-path: polygon(8% 100%, 50% 0, 92% 100%);"></div>
+
+    <div style="position: absolute; top: 22px; right: 22px; display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #f4f1ea; border-radius: 8px;">
+      <div style="width: 38px; height: 38px; border-radius: 6px; background: #1b2a3b;"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <div style="font-size: 15px; font-weight: 700; color: #14171d; letter-spacing: 0.02em;">[SPONSOR]</div>
+        <div style="font-size: 11px; font-weight: 600; color: #5a6270; letter-spacing: 0.08em;">SPONSORED</div>
+      </div>
+    </div>
+
+    <div style="position: absolute; right: 22px; bottom: 22px; width: 220px; height: 124px; border-radius: 8px; background: linear-gradient(180deg, #2a3342, #1a2029); border: 2px solid #2f3846; overflow: hidden;">
+      <div style="position: absolute; left: 78px; top: 22px; width: 64px; height: 64px; border-radius: 50%; background: #3b4556;"></div>
+      <div style="position: absolute; left: 44px; top: 82px; width: 132px; height: 70px; border-radius: 60px 60px 0 0; background: #3b4556;"></div>
+    </div>
+
+    <svg style="position: absolute; left: 0; top: 0; width: 960px; height: 540px; opacity: {{patternOpacity}};" viewBox="0 0 960 540">
+      <defs>
+        <pattern id="preview-tile" width="300" height="130" patternUnits="userSpaceOnUse" patternTransform="rotate(-22)">
+          <text x="0" y="44" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="16" letter-spacing="3" fill="#ffffff">PREVIEW · @KERNOWBUILDS</text>
+          <text x="150" y="109" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="16" letter-spacing="3" fill="#ffffff">PREVIEW · @KERNOWBUILDS</text>
+        </pattern>
+      </defs>
+      <rect width="960" height="540" fill="url(#preview-tile)"></rect>
+    </svg>
+
+    <sc-if value="{{isWhole}}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; {{boardPos}} width: 400px; display: flex; flex-direction: column; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.10);">
+        <div style="height: 92px; display: flex; align-items: center; justify-content: center; gap: 8px; background: repeating-linear-gradient(135deg, #1a1e26 0 10px, #14171d 10px 20px); color: #8e99ab; font-size: 12.5px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8e99ab" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="2"></circle><path d="M21 17l-5-5-9 8"></path></svg>
+          <span>Your board image · 400 × 92</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; background: rgba(9, 11, 15, 0.94);">
+          <span style="font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 0.16em; color: {{accent}};">PREVIEW</span>
+          <span style="font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; color: #c9d0db;">kernow.build/m/1432</span>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{isCompact}}" hint-placeholder-val="{{ true }}">
+    <div style="position: absolute; {{boardPos}} display: flex; align-items: center; gap: 14px; padding: 12px 14px; background: rgba(9, 11, 15, 0.88); border: 1px solid rgba(255, 255, 255, 0.10); border-radius: 10px;">
+      <sc-if value="{{isMonogram}}" hint-placeholder-val="{{ true }}">
+        <div style="width: 46px; height: 46px; border-radius: 8px; background: {{accent}}; color: #191305; font-weight: 720; font-size: 17px; letter-spacing: 0.02em; display: flex; align-items: center; justify-content: center;">KB</div>
+      </sc-if>
+      <sc-if value="{{isLogo}}" hint-placeholder-val="{{ false }}">
+        <div style="width: 118px; height: 52px; border-radius: 8px; border: 1.5px dashed #616c7d; display: flex; align-items: center; justify-content: center; gap: 7px; color: #8e99ab; font-size: 11.5px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8e99ab" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="2"></circle><path d="M21 17l-5-5-9 8"></path></svg>
+          <span>Your image</span>
+        </div>
+      </sc-if>
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 0.16em; color: {{accent}};">PREVIEW</span>
+          <span style="font-size: 12.5px; color: #8e99ab;">@kernowbuilds</span>
+        </div>
+        <div style="font-size: 21px; font-weight: 650; color: #e7eaf0; letter-spacing: -0.01em;">Licence this moment</div>
+        <div style="font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13.5px; color: #c9d0db;">kernow.build/m/1432</div>
+      </div>
+      <sc-if value="{{showQr}}" hint-placeholder-val="{{ true }}">
+        <svg width="76" height="76" viewBox="0 0 76 76" style="flex: none;">
+          <rect width="76" height="76" rx="4" fill="#ffffff"></rect>
+          <g fill="#0d0f13">
+            <rect x="6" y="6" width="20" height="20"></rect><rect x="10" y="10" width="12" height="12" fill="#ffffff"></rect><rect x="13" y="13" width="6" height="6"></rect>
+            <rect x="50" y="6" width="20" height="20"></rect><rect x="54" y="10" width="12" height="12" fill="#ffffff"></rect><rect x="57" y="13" width="6" height="6"></rect>
+            <rect x="6" y="50" width="20" height="20"></rect><rect x="10" y="54" width="12" height="12" fill="#ffffff"></rect><rect x="13" y="57" width="6" height="6"></rect>
+          </g>
+          <text x="48" y="54" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#616c7d">QR</text>
+        </svg>
+      </sc-if>
+    </div>
+    </sc-if>
+  </div>
+  <div style="height: 56px; display: flex; align-items: center; gap: 18px; padding: 0 18px; border-top: 1px solid #262c36; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: #8e99ab;">
+    <span style="color: #e2b658;">PUBLIC PREVIEW · 16:9</span>
+    <span>The board is the creator's own. The tiled pattern deters use; it does not prevent it.</span>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#e2b658","options":["#e2b658","#5fc3d4","#6fcf97"],"section":"Board"},"position":{"editor":"enum","options":["lower-left","upper-left","lower-right"],"default":"lower-left","section":"Board"},"mark":{"editor":"enum","options":["monogram","logo image","whole board image"],"default":"monogram","section":"Board"},"showQr":{"editor":"boolean","default":true,"section":"Board"},"pattern":{"editor":"range","min":0,"max":0.3,"step":0.02,"default":0.12,"section":"Protection"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const positions = {
+      'lower-left': 'left: 26px; bottom: 26px;',
+      'upper-left': 'left: 26px; top: 26px;',
+      'lower-right': 'right: 262px; bottom: 26px;',
+    };
+    const position = this.props.position ?? 'lower-left';
+    const mark = this.props.mark ?? 'monogram';
+    return {
+      isMonogram: mark === 'monogram',
+      isLogo: mark === 'logo image',
+      isWhole: mark === 'whole board image',
+      isCompact: mark !== 'whole board image',
+      accent: this.props.accent ?? '#e2b658',
+      boardPos: positions[position] ?? positions['lower-left'],
+      showQr: this.props.showQr ?? true,
+      patternOpacity: this.props.pattern ?? 0.12,
+    };
+  }
+}
+</script>
+</body>
+</html>

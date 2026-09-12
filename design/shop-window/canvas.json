@@ -1,0 +1,17 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Public preview · 16:9", "x": 0, "y": 0, "w": 960, "h": 596 },
+    { "file": "Vertical.dc.html", "title": "Public preview · 9:16", "x": 1040, "y": 0, "w": 405, "h": 776 },
+    { "file": "BoardEditor.dc.html", "title": "Board editor · OBS dock", "x": 2080, "y": 0, "w": 360, "h": 1240 },
+    { "file": "SponsorPreview.dc.html", "title": "Sponsor-only preview", "x": 0, "y": 896, "w": 960, "h": 596 },
+    { "file": "Licensed.dc.html", "title": "Licensed copy", "x": 1040, "y": 896, "w": 960, "h": 596 }
+  ],
+  "annotations": [
+    { "id": "two-marks", "x": 0, "y": -330, "w": 300, "text": "Two marks, two jobs.\nInvisible: forensic, a serial per licence, applied when the licence is activated.\nVisible: this board, on previews only. It advertises the shop and deters use. Removal tools make it deterrence, not protection." },
+    { "id": "always-added", "x": 340, "y": -330, "w": 300, "text": "What the tool always adds: the PREVIEW label and the link. A creator's logo, or a whole board image of their own, sits beside them and cannot replace them." },
+    { "id": "nothing-stale", "x": 680, "y": -330, "w": 300, "text": "Nothing in the pixels that goes stale. No price on the board, since prices change. The link goes to the creator's own domain: no project server counts the clicks, and it has to outlive any host." },
+    { "id": "who-sees", "x": 1020, "y": -330, "w": 300, "text": "Who sees which board. The public shop lists moments with no sponsor in them. A sponsored moment goes only to its sponsor, on the private board, with the delivery report." },
+    { "id": "samples", "x": 1360, "y": -330, "w": 300, "text": "Sample values: [SPONSOR], @kernowbuilds and kernow.build. The QR is a placeholder, not a code that scans." }
+  ],
+  "launch": { "view": "canvas" }
+}
