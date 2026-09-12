@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SAMPLE_PROFILE, SAMPLE_PROSPECTS } from '../store/sample';
+import { DEFAULT_BOARD, MAX_IMAGE_CHARS } from './board';
 import { DEFAULT_TERMS } from './pricing';
 import { WORKSPACE_VERSION, parseWorkspace } from './workspace';
 
@@ -48,6 +49,32 @@ describe('parseWorkspace', () => {
     expect(parseWorkspace(null).ok).toBe(false);
     expect(parseWorkspace([]).ok).toBe(false);
     expect(parseWorkspace({ profile: SAMPLE_PROFILE }).ok).toBe(false);
+  });
+
+  it('gives a file saved before format 4 the default shop board', () => {
+    const parsed = parseWorkspace({ ...V1_FILE, version: 3 });
+    expect(parsed.ok && parsed.workspace.board).toEqual(DEFAULT_BOARD);
+  });
+
+  it('round-trips a board with an uploaded image', () => {
+    const board = { ...DEFAULT_BOARD, mark: 'logo', image: 'data:image/png;base64,iVBORw0KGgo=', imageAspect: 2.5, linkBase: 'kernow.build/m/' };
+    const parsed = parseWorkspace({ ...V1_FILE, version: 4, board });
+    expect(parsed.ok && parsed.workspace.board).toEqual(board);
+  });
+
+  it('refuses a board image that is not a raster data URL, or is too large', () => {
+    const svg = 'data:image/svg+xml;base64,PHN2Zz4=';
+    const huge = `data:image/png;base64,${'A'.repeat(MAX_IMAGE_CHARS)}`;
+    for (const image of [svg, huge, 'https://example.com/logo.png']) {
+      const parsed = parseWorkspace({ ...V1_FILE, version: 4, board: { ...DEFAULT_BOARD, image } });
+      expect(parsed).toEqual({ ok: false, error: expect.stringContaining('board.image') });
+    }
+  });
+
+  it('refuses a bad accent and never lets the pattern reach zero', () => {
+    expect(parseWorkspace({ ...V1_FILE, version: 4, board: { ...DEFAULT_BOARD, accent: 'gold' } }).ok).toBe(false);
+    const parsed = parseWorkspace({ ...V1_FILE, version: 4, board: { ...DEFAULT_BOARD, pattern: 0 } });
+    expect(parsed.ok && parsed.workspace.board.pattern).toBe(0.04);
   });
 
   it('rejects an exclusivity window the pricing tables do not know', () => {

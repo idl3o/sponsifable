@@ -303,3 +303,39 @@ export interface Sighting {
    */
   verified: boolean;
 }
+
+/** How the creator's own mark appears on the shop board. */
+export type MarkMode = 'monogram' | 'logo' | 'board-image';
+
+/** Where the board sits on a landscape preview. */
+export type LandscapePosition = 'lower-left' | 'upper-left' | 'lower-right';
+
+/** Where the board sits on a vertical preview. The bottom sits under the app's own UI. */
+export type VerticalPosition = 'upper-left' | 'middle-left' | 'bottom';
+
+/**
+ * The creator's visible mark on clip previews: the board that advertises
+ * their shop window. The creator designs it; the renderer always adds the
+ * PREVIEW label, and on public previews the link, whatever the design says.
+ */
+export interface BoardSpec {
+  mark: MarkMode;
+  /** Up to three characters. Empty means the profile name's initials. */
+  monogram: string;
+  /** The uploaded image as a PNG data URL, downscaled on upload. Empty when none. */
+  image: string;
+  /** The image's width divided by its height. Zero when there is no image. */
+  imageAspect: number;
+  /** Empty means the first channel's handle. */
+  handle: string;
+  cta: string;
+  /** Where each moment's listing lives, without the scheme, e.g. "kernow.build/m/". */
+  linkBase: string;
+  showQr: boolean;
+  landscape: LandscapePosition;
+  vertical: VerticalPosition;
+  /** The board's accent, as #rrggbb. */
+  accent: string;
+  /** Strength of the tiled PREVIEW pattern, 0.04 to 0.3. Never zero on a preview. */
+  pattern: number;
+}

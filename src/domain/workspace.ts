@@ -1,7 +1,9 @@
 import { FORMATS_BY_PLATFORM, NICHE_LABEL } from './benchmarks';
+import { DEFAULT_BOARD, MAX_IMAGE_CHARS, PATTERN_RANGE } from './board';
 import { paidDaysFor } from './deals';
 import { DEFAULT_TERMS } from './pricing';
 import type {
+  BoardSpec,
   Channel,
   CreatorProfile,
   Deal,
@@ -30,8 +32,9 @@ import type {
 /**
  * Bump when the shape changes, and teach `parseWorkspace` the old shape.
  * 1: first release. 2: the deal log. 3: declared spend and the introductory rate.
+ * 4: the shop board.
  */
-export const WORKSPACE_VERSION = 3;
+export const WORKSPACE_VERSION = 4;
 
 export interface Workspace {
   version: number;
@@ -39,6 +42,7 @@ export interface Workspace {
   terms: DealTerms;
   prospects: Prospect[];
   deals: Deal[];
+  board: BoardSpec;
 }
 
 export type ParseResult = { ok: true; workspace: Workspace } | { ok: false; error: string };
@@ -216,6 +220,42 @@ function parseSighting(value: unknown, path: string): Sighting {
   };
 }
 
+const IMAGE_URL = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+const HEX_COLOUR = /^#[0-9a-f]{6}$/i;
+
+/** The uploaded image: a PNG, JPEG or WebP data URL within the size cap, or empty. */
+function parseImage(value: unknown, path: string): string {
+  const image = str(value, path, '');
+  if (image && (!IMAGE_URL.test(image) || image.length > MAX_IMAGE_CHARS)) {
+    throw new Invalid(`${path} should be a PNG, JPEG or WebP image under ${Math.round(MAX_IMAGE_CHARS / 1000)} KB`);
+  }
+  return image;
+}
+
+/** The shop board. Absent before format 4, when it takes the defaults. */
+function parseBoard(value: unknown): BoardSpec {
+  if (value === undefined) return { ...DEFAULT_BOARD };
+  const o = obj(value, 'board');
+  const d = DEFAULT_BOARD;
+  const accent = str(o.accent, 'board.accent', d.accent);
+  if (!HEX_COLOUR.test(accent)) throw new Invalid('board.accent should be a colour like #e2b658');
+  const pattern = num(o.pattern, 'board.pattern', d.pattern);
+  return {
+    mark: oneOf(o.mark ?? d.mark, ['monogram', 'logo', 'board-image'] as const, 'board.mark'),
+    monogram: str(o.monogram, 'board.monogram', d.monogram).slice(0, 3),
+    image: parseImage(o.image, 'board.image'),
+    imageAspect: Math.max(0, num(o.imageAspect, 'board.imageAspect', d.imageAspect)),
+    handle: str(o.handle, 'board.handle', d.handle),
+    cta: str(o.cta, 'board.cta', d.cta),
+    linkBase: str(o.linkBase, 'board.linkBase', d.linkBase),
+    showQr: bool(o.showQr, 'board.showQr', d.showQr),
+    landscape: oneOf(o.landscape ?? d.landscape, ['lower-left', 'upper-left', 'lower-right'] as const, 'board.landscape'),
+    vertical: oneOf(o.vertical ?? d.vertical, ['upper-left', 'middle-left', 'bottom'] as const, 'board.vertical'),
+    accent,
+    pattern: Math.min(PATTERN_RANGE.max, Math.max(PATTERN_RANGE.min, pattern)),
+  };
+}
+
 /** A licence window: a whole number of days, or null for unlimited. */
 function parsePaidDays(value: unknown, terms: DealTerms, path: string): number | null {
   if (value === undefined) return paidDaysFor(terms.usageRights);
@@ -284,6 +324,7 @@ export function parseWorkspace(input: unknown): ParseResult {
         terms: parseTerms(o.terms, 'terms'),
         prospects: arr(o.prospects, 'prospects').map((p, i) => parseProspect(p, `prospects[${i}]`)),
         deals: arr(o.deals ?? [], 'deals').map((d, i) => parseDeal(d, `deals[${i}]`)),
+        board: parseBoard(o.board),
       },
     };
   } catch (error) {

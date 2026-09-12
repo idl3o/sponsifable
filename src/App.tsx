@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { BoardView } from './components/board/BoardView';
 import { DealsView } from './components/DealsView';
 import { MediaKitView } from './components/MediaKitView';
 import { OutreachView } from './components/OutreachView';
@@ -18,6 +19,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'prospects', label: 'Prospects' },
   { id: 'outreach', label: 'Outreach' },
   { id: 'deals', label: 'Deals' },
+  { id: 'board', label: 'Shop board' },
 ];
 
 /** Today as an ISO date, read once so the domain layer stays pure. */
@@ -58,7 +60,7 @@ async function readWorkspaceFile(file: File): Promise<Upload> {
 function DataControls() {
   const fileRef = useRef<HTMLInputElement>(null);
   const workspace = useStore(
-    useShallow((s) => ({ profile: s.profile, terms: s.terms, prospects: s.prospects, deals: s.deals })),
+    useShallow((s) => ({ profile: s.profile, terms: s.terms, prospects: s.prospects, deals: s.deals, board: s.board })),
   );
   const importAll = useStore((s) => s.importAll);
   const [problem, setProblem] = useState<string | null>(null);
@@ -132,6 +134,7 @@ export function App() {
         {tab === 'prospects' && <ProspectsView today={today} />}
         {tab === 'outreach' && <OutreachView today={today} />}
         {tab === 'deals' && <DealsView today={today} />}
+        {tab === 'board' && <BoardView />}
       </main>
     </div>
   );

@@ -2,8 +2,10 @@ import { create, type StoreApi } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { produce } from 'immer';
 import { FORMATS_BY_PLATFORM } from '../domain/benchmarks';
+import { DEFAULT_BOARD } from '../domain/board';
 import { DEFAULT_TERMS } from '../domain/pricing';
 import type {
+  BoardSpec,
   Channel,
   CreatorProfile,
   Deal,
@@ -16,13 +18,14 @@ import type {
 import { WORKSPACE_VERSION, parseWorkspace, type Workspace } from '../domain/workspace';
 import { SAMPLE_PROFILE, SAMPLE_PROSPECTS } from './sample';
 
-export type Tab = 'profile' | 'rate-card' | 'media-kit' | 'prospects' | 'outreach' | 'deals';
+export type Tab = 'profile' | 'rate-card' | 'media-kit' | 'prospects' | 'outreach' | 'deals' | 'board';
 
 interface State {
   profile: CreatorProfile;
   terms: DealTerms;
   prospects: Prospect[];
   deals: Deal[];
+  board: BoardSpec;
   tab: Tab;
   /** Prospect currently open in the outreach composer. */
   activeProspectId: string | null;
@@ -54,6 +57,7 @@ interface Actions {
   removeDeal: (id: string) => void;
   addSighting: (dealId: string, sighting: Omit<Sighting, 'id'>) => void;
   removeSighting: (dealId: string, sightingId: string) => void;
+  setBoard: (patch: Partial<BoardSpec>) => void;
   /** Replace all stored data with a workspace that has already been validated. */
   importAll: (workspace: Workspace) => void;
   resetToSample: () => void;
@@ -64,12 +68,13 @@ const initialState: State = {
   terms: DEFAULT_TERMS,
   prospects: SAMPLE_PROSPECTS,
   deals: [],
+  board: DEFAULT_BOARD,
   tab: 'rate-card',
   activeProspectId: null,
   seq: 100,
 };
 
-type Persisted = Pick<State, 'profile' | 'terms' | 'prospects' | 'deals' | 'seq'>;
+type Persisted = Pick<State, 'profile' | 'terms' | 'prospects' | 'deals' | 'board' | 'seq'>;
 
 /**
  * Upgrade a save written by an older version. A save that fails validation is
@@ -80,16 +85,16 @@ function migrate(persisted: unknown, version: number): Persisted {
   const parsed = parseWorkspace({ ...(persisted as object), version: Math.max(1, version) });
   const seq = (persisted as { seq?: unknown } | null)?.seq;
   if (parsed.ok) {
-    const { profile, terms, prospects, deals } = parsed.workspace;
-    return { profile, terms, prospects, deals, seq: typeof seq === 'number' ? seq : 100 };
+    const { profile, terms, prospects, deals, board } = parsed.workspace;
+    return { profile, terms, prospects, deals, board, seq: typeof seq === 'number' ? seq : 100 };
   }
   try {
     localStorage.setItem(`sponsorable-unreadable-v${version}`, JSON.stringify(persisted));
   } catch {
     // Storage full or blocked. Nothing more can be done from here.
   }
-  const { profile, terms, prospects, deals } = initialState;
-  return { profile, terms, prospects, deals, seq: initialState.seq };
+  const { profile, terms, prospects, deals, board } = initialState;
+  return { profile, terms, prospects, deals, board, seq: initialState.seq };
 }
 
 type SetState = StoreApi<State & Actions>['setState'];
@@ -248,6 +253,7 @@ function workspaceActions(set: SetState): Pick<Actions, 'setTab' | 'importAll' |
         terms: workspace.terms,
         prospects: workspace.prospects,
         deals: workspace.deals,
+        board: workspace.board,
         activeProspectId: null,
       }),
     resetToSample: () =>
@@ -256,6 +262,7 @@ function workspaceActions(set: SetState): Pick<Actions, 'setTab' | 'importAll' |
         terms: DEFAULT_TERMS,
         prospects: SAMPLE_PROSPECTS,
         deals: [],
+        board: DEFAULT_BOARD,
         activeProspectId: null,
       }),
   };
@@ -279,6 +286,7 @@ export const useStore = create<State & Actions>()(
         ...channelActions(edit),
         ...prospectActions(edit, set),
         ...dealActions(edit),
+        setBoard: (patch) => edit((s) => void Object.assign(s.board, patch)),
       };
     },
     {
@@ -292,6 +300,7 @@ export const useStore = create<State & Actions>()(
         terms: s.terms,
         prospects: s.prospects,
         deals: s.deals,
+        board: s.board,
         seq: s.seq,
       }),
     },

@@ -9,7 +9,7 @@ import { useStore } from './store/useStore';
  * derived values reach the screen.
  */
 
-const TABS = ['Profile', 'Rate card', 'Media kit', 'Prospects', 'Outreach', 'Deals'];
+const TABS = ['Profile', 'Rate card', 'Media kit', 'Prospects', 'Outreach', 'Deals', 'Shop board'];
 
 beforeEach(() => {
   useStore.getState().resetToSample();
@@ -17,6 +17,8 @@ beforeEach(() => {
   // jsdom implements neither of these.
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
   window.print = vi.fn();
+  // jsdom has no 2D canvas; the board falls back to estimated text widths and skips drawing.
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
 });
 
 afterEach(() => {
@@ -100,6 +102,29 @@ describe('App', () => {
     const prospect = useStore.getState().prospects.find((p) => p.id === deal?.prospectId);
     expect(prospect?.stage).toBe('won');
     expect(screen.getByText(/agreed a median of/i)).toBeTruthy();
+  });
+
+  it('edits the shop board and checks it live', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Shop board' }));
+    expect(screen.getByText('No link yet')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText(/Link to the listing/i), { target: { value: 'kernow.build/m/' } });
+    expect(useStore.getState().board.linkBase).toBe('kernow.build/m/');
+    expect(screen.getByText('Your own domain')).toBeTruthy();
+
+    expect(screen.getByText('Clear of vertical app UI')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/Position on 9:16/i), { target: { value: 'bottom' } });
+    expect(screen.getByText("Under the app's UI in 9:16")).toBeTruthy();
+  });
+
+  it('switches the mark to an uploaded image and says it cannot judge it', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Shop board' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Your image' }));
+    expect(useStore.getState().board.mark).toBe('logo');
+    expect(screen.getByRole('button', { name: 'Upload image' })).toBeTruthy();
+    expect(screen.getByText('No image uploaded')).toBeTruthy();
   });
 
   it('refuses an invalid import, says why, and keeps the workspace', async () => {

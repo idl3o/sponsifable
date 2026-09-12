@@ -31,6 +31,18 @@
 - **A missing watermark proves nothing.** TrustMark ships a removal model. No copy may treat absence as evidence.
 - **The CLI does not price.** `verify` reports facts. The overrun invoice is composed in TypeScript from `benchmarks.ts`, so market assumptions stay in one file.
 
+### Shop window board (see `design/shop-window/`)
+
+- **The design canvas is the visual spec.** Its sources are in `design/shop-window/`. When code and canvas disagree, decide which should move, and update both.
+- **The board's invariants hold whatever the creator designs:**
+  - every preview says PREVIEW and carries the tiled pattern, which never drops below 0.04;
+  - a public preview carries the link;
+  - no price is ever drawn, and `boardChecks.ts` refuses one;
+  - the link uses the creator's own domain, and shorteners are refused;
+  - a sponsored moment gets the private board, with no public link, and goes only to its sponsor.
+- **One renderer.** `src/components/board/render.ts` draws both the live preview and the exported overlay, so what the creator sees is what ships. Composite the transparent overlay PNG anywhere else; never re-implement the drawing, in Python or anywhere else.
+- **The invisible mark goes on at licence activation, after the creator confirms.** Sealing stays opt-in.
+
 ## Gotchas already resolved — do not regress
 
 - `tsconfig` runs `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`. Optional props are spread conditionally (`{...(hint ? { hint } : {})}`) rather than passed as `undefined`. Array indexing needs a guard.
@@ -38,6 +50,9 @@
 - Vitest runs `.test.ts` in node and `.test.tsx` in jsdom as two projects in `vite.config.ts`, because Vitest 4 removed `environmentMatchGlobs`. Component tests must stub `fetch` (the Ollama probe) and `window.print`.
 - **npm 11.4.2 crashes resolving Vitest 4's peers** (`Cannot read properties of null (reading 'edgesOut')`), even from a clean tree. Installing from the lockfile works. To change a dependency, or anything else that rewrites the lockfile, use a newer npm: `npx -y npm@11.19.1 install`. npm 11.4.2 also strips the `libc` fields that pick glibc or musl binaries on Linux CI. It skips esbuild's postinstall, which is harmless because the platform binary arrives as an optional dependency.
 - **obs-websocket's `InputActiveStateChanged` and `InputShowStateChanged` are high-volume and not in "All".** Subscribe to bits 1 << 17 and 1 << 18 explicitly, or the on-air log hears nothing. "Active" means in the program feed; "showing" includes preview and is not evidence of broadcast. Record wall-clock UTC: `outputDuration` is inflated under Enhanced Broadcasting. See `docs/research/obs-extensibility-2026-09.md`.
+- **Workspace format 4 is the shop board.** The shelved `sandbox/lightning` branch also claims format 4, for settlement. Renumber it to 5 when reviving it, and bump the Python `SUPPORTED_VERSION` to match.
+- **jsdom has no 2D canvas.** App tests stub `getContext` to return null. `makeMeasure` then falls back to estimated widths, and `renderBoard` returns null rather than throwing.
+- **The vertical board positions anchor to `VERTICAL_UI_ZONES`**: just under the top bar, or just above the button column. The QR code is sized (92 units landscape, 68 vertical, error correction M) for at least 3 px a module on 720p exports. The exported codes decode after 75% downscaling and JPEG at quality 60. Do not shrink the codes without the QR check passing.
 - `updateChannel` resets `formats` when the platform changes. That is deliberate: a YouTube format list on a TikTok channel prices nonsense.
 - The play test (`node scripts/playtest.mjs`) drives the installed Chrome via `channel: 'chrome'`, because the bundled Playwright build does not match the browsers on this machine. Do not swap it back to `chromium.launch()` without running `npx playwright install`.
 - Channel cards and proof points both render a button labelled "Remove". Any selector for one must exclude the other.
