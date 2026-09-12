@@ -12,8 +12,8 @@ It takes about an hour, needs no special access, and is worth repeating when a p
 
 ## Protocol
 
-1. **Make a test deal.** In the app, add a prospect called `Survival test`, record a won deal against it with usage set to whitelisting, and export the workspace.
-2. **Seal each image.** `sponsorable seal <deal> image.png --source capture --workspace sponsorable.json`. Seal each aspect ratio separately, because reframing is the one transform the proxy shows the mark does not survive.
+1. **Make a test deal.** In the app, served by `sponsorable`, add a prospect called `Survival test` and record a won deal against it with usage set to whitelisting.
+2. **Seal each image.** `sponsorable seal <deal> image.png --source capture`. Seal each aspect ratio separately, because reframing is the one transform the proxy shows the mark does not survive.
 3. **Push each sealed file through each real route:**
    - an organic post on each platform;
    - a paid ad on Meta (feed and story placements) and on TikTok, using the sealed file as the creative;

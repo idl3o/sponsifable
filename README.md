@@ -4,7 +4,7 @@
 
 Most creators price sponsorship by guessing, or by repeating a number someone said on a podcast. Then a brand asks why, and the number falls apart. Sponsorable derives a price you can defend line by line, and hands you the sentence to say when you are asked to justify it.
 
-MIT licensed. No account, no server, no telemetry. Built for a creator who runs their own tools on a small budget: one install, and everything stays on your machine.
+MIT licensed. No account, no remote server, no telemetry. Built for a creator who runs their own tools on a small budget: one install, and everything stays on your machine.
 
 ---
 
@@ -76,7 +76,7 @@ See [CONTRIBUTING.md](https://github.com/idl3o/sponsorable/blob/main/CONTRIBUTIN
 
 **Call a paid language model.** The pitch composer is deterministic and complete without any model. If Ollama is running locally, the outreach tab offers to tighten the wording, with instructions to preserve every number and invent nothing. That is optional and stays on your machine.
 
-**Track you.** No analytics, no error reporting, no account. Your unreleased rates and prospect list are commercially sensitive, and the simplest way to keep them private is never to transmit them. Export and import are a JSON file you control. The single exception is sealing, which you choose deal by deal: it sends one salted hash to a public timestamp authority, and tells you before it does.
+**Track you.** No analytics, no error reporting, no account. Your unreleased rates and prospect list are commercially sensitive, and the simplest way to keep them private is never to transmit them. Your workspace is one JSON file on your own disk, and Export and Import copy it wherever you like. The single exception is sealing, which you choose deal by deal: it sends one salted hash to a public timestamp authority, and tells you before it does.
 
 **Treat a missing watermark as evidence.** Watermarks can be stripped, and the one Sponsorable uses ships with a removal model. A mark that decodes is evidence; a mark that does not proves nothing, and the tool never says otherwise.
 
@@ -95,20 +95,23 @@ pipx install --force ".[seal]" # or with it: adds PyTorch, several hundred MB
 sponsorable                    # serves the app at http://127.0.0.1:5180
 sponsorable key --ssh ~/.ssh/id_ed25519   # sign receipts with your SSH key
 sponsorable setup              # fetch the watermark model once, ahead of time
-sponsorable seal dl-104 reel.png --source capture --workspace sponsorable.json
-sponsorable verify ad.jpg --started 2026-10-01 --workspace sponsorable.json
+sponsorable seal dl-104 reel.png --source capture
+sponsorable verify ad.jpg --started 2026-10-01
 ```
 
-The server binds to 127.0.0.1 only. Serving from your own machine also means the optional Ollama integration talks to Ollama on the same machine, with no cross-origin configuration.
+The server binds to 127.0.0.1 only, and answers only requests addressed to 127.0.0.1 or localhost, so a web page cannot reach it by rebinding a hostname. Serving from your own machine also means the optional Ollama integration talks to Ollama on the same machine, with no cross-origin configuration.
+
+The app saves your workspace to `~/.sponsorable/workspace.json` (or `$SPONSORABLE_HOME`) through that server. `seal` and `verify` write into the same file, so the app picks up a seal or a verified sighting when you return to it, with nothing to import. Every write checks that the file has not changed since it was read, so the app and the command line cannot overwrite each other. Pass `--workspace` to point any command at another file.
 
 For development:
 
 ```bash
-npm run dev        # http://localhost:5180
-npm test           # 114 tests, including the calibration sweep
+npm run dev        # http://localhost:5180, saving in the browser only
+npm run dev:api    # beside it: the workspace server, so the app saves to the file
+npm test           # 167 tests, including the calibration sweep
 npm run typecheck
 npm run lint       # includes the house rules: no function over 50 lines
-python -m pytest   # 43 tests: receipts, SSH signatures, timestamps, seal and verify
+python -m pytest   # 87 tests: the workspace server, receipts, SSH signatures, timestamps, seal and verify
 
 node scripts/playtest.mjs   # drives real Chrome, screenshots every tab,
                             # checks overflow, tap targets and broken numbers
@@ -133,9 +136,10 @@ src/domain/      pure functions: no clock, no randomness, no I/O
   workspace.ts     versioned file format; validates every import and old save
   localModel.ts    optional Ollama sharpening, fails quietly
   *.test.ts        property tests plus the calibration sweep
-src/store/       zustand and immer, persisted to localStorage
+src/store/       zustand and immer, kept in step with the workspace file; the browser holds a cache
 src/components/  one view per tab
 python/          the `sponsorable` CLI: serve, seal, verify
+  api.py           the workspace file over HTTP: compare-and-swap writes, localhost only
   receipt.py       pure: the receipt, its commitment, and the rules a claim must pass
 docs/            provenance design, the research behind the benchmarks, and an archive of papers
 scripts/         browser play test, watermark survival test, archive renderer

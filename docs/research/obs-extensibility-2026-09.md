@@ -76,6 +76,8 @@ The report is signed like the existing receipts, with the creator's SSH key, and
 3. **The workspace file becomes the source of truth.** OBS's embedded browser keeps its own storage, apart from the streamer's browser. The overlay, the dock, the web app and the CLI can only agree through a file the local server owns. The server therefore gains a small read-only JSON interface for the overlay, and a write path for the app. This is the restructure the pivot already named.
 4. **The evaluator and the deal panel come later, as a custom dock** showing the same app.
 
+Status on 2026-09-12: the third item is built. The server owns `~/.sponsorable/workspace.json` and serves it at `/api/workspace`, with compare-and-swap writes. The first item is built in part: `/overlay.html?deal=<id>` draws the disclosure and the sponsor's name for a won deal, with no sponsor asset yet. The logger waits on the probe.
+
 ## Decisions this forces
 
 - **A WebSocket client for Python.** The standard library has none. The choice is the `websockets` package, which is pure Python and widely used, or a minimal client written here, as the BOLT11 decoder was. The protocol needs only text frames, masking and ping, so either is defensible. The package is less to get wrong.

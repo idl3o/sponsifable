@@ -197,7 +197,7 @@ export function ProfileView() {
   return (
     <>
       <h1>Your profile</h1>
-      <p className="lede">Everything downstream is derived from this page. Nothing here leaves your browser.</p>
+      <p className="lede">Everything downstream is derived from this page. Nothing here leaves your machine.</p>
       <div className="split">
         <div className="stack">
           <IdentityCard />

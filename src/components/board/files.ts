@@ -1,9 +1,10 @@
 import { MAX_IMAGE_CHARS } from '../../domain/board';
 
 /**
- * Files in and out of the board editor. Everything happens in this browser:
- * an uploaded image is downscaled and kept in the workspace, and an exported
- * overlay is handed to the browser as a download. Nothing is sent anywhere.
+ * Files in and out of the board editor. The work happens in this browser: an
+ * uploaded image is downscaled here and kept in the workspace file, and an
+ * exported overlay is handed to the browser as a download. Nothing leaves
+ * the machine.
  */
 
 /** Load an image from a URL, or null if it will not decode. */
