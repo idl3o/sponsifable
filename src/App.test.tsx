@@ -161,6 +161,19 @@ describe('App', () => {
     expect(useStore.getState().profile.niche).not.toBe('astrology');
   });
 
+  it('says the workspace is kept in this browser when no server is syncing it', () => {
+    render(<App />);
+    expect(screen.getByText('Saved in this browser only')).toBeTruthy();
+  });
+
+  it('counts on from the highest id in an imported workspace, so new ids never repeat one', () => {
+    const { profile, terms, prospects, board } = useStore.getState();
+    const channels = [...profile.channels.slice(0, 1).map((c) => ({ ...c, id: 'ch-500' }))];
+    useStore.getState().importAll({ version: 4, profile: { ...profile, channels }, terms, prospects, deals: [], board });
+    useStore.getState().addChannel('x');
+    expect(useStore.getState().profile.channels.map((c) => c.id)).toContain('ch-501');
+  });
+
   it('generates ids without randomness, so two adds are predictable', () => {
     const { addChannel } = useStore.getState();
     const seqBefore = useStore.getState().seq;

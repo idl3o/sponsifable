@@ -6,6 +6,7 @@
   "description": "Work out what to charge a sponsor, prove the audience, send the pitch, track the pipeline. Local-first, no account, no telemetry.",
   "scripts": {
     "dev": "vite",
+    "dev:api": "node scripts/dev-api.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

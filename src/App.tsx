@@ -9,7 +9,8 @@ import { ProfileView } from './components/ProfileView';
 import { ProspectsView } from './components/ProspectsView';
 import { RateCardView } from './components/RateCardView';
 import { Button, Pill } from './components/ui/Primitives';
-import { WORKSPACE_VERSION, parseWorkspace, type Workspace } from './domain/workspace';
+import { parseWorkspace, workspaceOf, type Workspace } from './domain/workspace';
+import { useSyncStatus } from './store/sync';
 import type { Tab } from './store/useStore';
 import { useStore } from './store/useStore';
 
@@ -57,6 +58,36 @@ async function readWorkspaceFile(file: File): Promise<Upload> {
   return parsed.ok ? parsed : { ok: false, message: `Not imported: ${parsed.error}.` };
 }
 
+/** Where the workspace is being saved, and anything the last sync needs to say. */
+function SyncLine() {
+  const { mode, path, reason, notice } = useSyncStatus(
+    useShallow((s) => ({ mode: s.mode, path: s.path, reason: s.reason, notice: s.notice })),
+  );
+  return (
+    <>
+      {notice && <Pill tone="warn">{notice}</Pill>}
+      {mode === 'file' && (
+        <span className="pill good" title={path || undefined}>
+          Saved to the workspace file
+        </span>
+      )}
+      {mode === 'browser-only' && (
+        <span
+          className="pill"
+          title="Run `sponsorable serve` and reload to keep the workspace in a file that OBS and the CLI can read."
+        >
+          Saved in this browser only
+        </span>
+      )}
+      {mode === 'unreadable' && (
+        <Pill tone="bad">
+          The workspace file could not be read: {reason}. Nothing is saved to it until it is fixed, or you import a file.
+        </Pill>
+      )}
+    </>
+  );
+}
+
 /** Export and import the whole workspace as a JSON file. */
 function DataControls() {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -64,21 +95,23 @@ function DataControls() {
     useShallow((s) => ({ profile: s.profile, terms: s.terms, prospects: s.prospects, deals: s.deals, board: s.board })),
   );
   const importAll = useStore((s) => s.importAll);
+  const adoptImport = useSyncStatus((s) => s.adoptImport);
   const [problem, setProblem] = useState<string | null>(null);
 
   const upload = (file: File) =>
     void readWorkspaceFile(file).then((result) => {
-      if (result.ok) importAll(result.workspace);
+      if (result.ok) {
+        importAll(result.workspace);
+        adoptImport();
+      }
       setProblem(result.ok ? null : result.message);
     });
 
   return (
     <div className="row no-print" style={{ gap: 6 }}>
+      <SyncLine />
       {problem && <Pill tone="bad">{problem}</Pill>}
-      <Button
-        onClick={() => downloadJson('sponsorable.json', { version: WORKSPACE_VERSION, ...workspace })}
-        title="Save everything to a file"
-      >
+      <Button onClick={() => downloadJson('sponsorable.json', workspaceOf(workspace))} title="Save everything to a file">
         Export
       </Button>
       <Button onClick={() => fileRef.current?.click()}>Import</Button>

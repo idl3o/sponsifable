@@ -15,7 +15,7 @@ import type {
   ProofPoint,
   Sighting,
 } from '../domain/types';
-import { WORKSPACE_VERSION, parseWorkspace, type Workspace } from '../domain/workspace';
+import { WORKSPACE_VERSION, parseWorkspace, seqFloor, type Workspace } from '../domain/workspace';
 import { SAMPLE_PROFILE, SAMPLE_PROSPECTS } from './sample';
 
 export type Tab = 'profile' | 'rate-card' | 'media-kit' | 'prospects' | 'outreach' | 'deals' | 'board';
@@ -248,14 +248,15 @@ function workspaceActions(set: SetState): Pick<Actions, 'setTab' | 'importAll' |
   return {
     setTab: (tab) => set({ tab }),
     importAll: (workspace) =>
-      set({
+      set((s) => ({
         profile: workspace.profile,
         terms: workspace.terms,
         prospects: workspace.prospects,
         deals: workspace.deals,
         board: workspace.board,
         activeProspectId: null,
-      }),
+        seq: Math.max(s.seq, seqFloor(workspace)),
+      })),
     resetToSample: () =>
       set({
         profile: SAMPLE_PROFILE,
@@ -269,11 +270,15 @@ function workspaceActions(set: SetState): Pick<Actions, 'setTab' | 'importAll' |
 }
 
 /**
- * Application state, persisted to this browser only.
+ * Application state.
  *
- * Nothing leaves the machine: no account, no server, no analytics. A creator's
- * unreleased rates and prospect list are commercially sensitive, and the
- * simplest way to keep them private is to never transmit them.
+ * The workspace file that `sponsorable serve` owns is the source of truth, and
+ * `sync.ts` keeps this store and the file in step. This browser's copy is a
+ * cache, and the whole save when the app runs without the server.
+ *
+ * Nothing leaves the machine: no account, no remote server, no analytics. A
+ * creator's unreleased rates and prospect list are commercially sensitive, and
+ * the simplest way to keep them private is to never transmit them.
  */
 export const useStore = create<State & Actions>()(
   persist(

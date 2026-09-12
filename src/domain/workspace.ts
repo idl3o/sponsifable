@@ -333,3 +333,30 @@ export function parseWorkspace(input: unknown): ParseResult {
     throw error;
   }
 }
+
+/** The parts of the app's state that make up a workspace. */
+export type WorkspaceSlices = Omit<Workspace, 'version'>;
+
+/** The workspace as it is saved: the current format, and only the fields a file carries. */
+export function workspaceOf(slices: WorkspaceSlices): Workspace {
+  const { profile, terms, prospects, deals, board } = slices;
+  return { version: WORKSPACE_VERSION, profile, terms, prospects, deals, board };
+}
+
+const GENERATED_ID = /^(?:ch|pp|pr|dl|st)-(\d+)$/;
+
+/**
+ * The highest id counter a workspace already uses. The counter is not saved in
+ * the file, so after loading one the store must count on from here, or its
+ * next id could repeat one the file holds. Ids the CLI writes, such as
+ * `st-verify-…`, are not counted and cannot collide.
+ */
+export function seqFloor(workspace: WorkspaceSlices): number {
+  const ids = [
+    ...workspace.profile.channels.map((c) => c.id),
+    ...workspace.profile.proofPoints.map((p) => p.id),
+    ...workspace.prospects.map((p) => p.id),
+    ...workspace.deals.flatMap((d) => [d.id, ...d.sightings.map((s) => s.id)]),
+  ];
+  return ids.reduce((high, id) => Math.max(high, Number(GENERATED_ID.exec(id)?.[1] ?? 0)), 0);
+}

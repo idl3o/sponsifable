@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { SAMPLE_PROFILE, SAMPLE_PROSPECTS } from '../store/sample';
 import { DEFAULT_BOARD, MAX_IMAGE_CHARS } from './board';
 import { DEFAULT_TERMS } from './pricing';
-import { WORKSPACE_VERSION, parseWorkspace } from './workspace';
+import type { Deal } from './types';
+import { WORKSPACE_VERSION, parseWorkspace, seqFloor, workspaceOf } from './workspace';
 
 /** A file exactly as the first release exported it: no version, no deals. */
 const V1_FILE = { profile: SAMPLE_PROFILE, terms: DEFAULT_TERMS, prospects: SAMPLE_PROSPECTS };
@@ -80,5 +81,28 @@ describe('parseWorkspace', () => {
   it('rejects an exclusivity window the pricing tables do not know', () => {
     const parsed = parseWorkspace({ ...V1_FILE, terms: { ...DEFAULT_TERMS, exclusivityDays: 45 } });
     expect(parsed.ok).toBe(false);
+  });
+});
+
+describe('seqFloor', () => {
+  const slices = { profile: SAMPLE_PROFILE, terms: DEFAULT_TERMS, prospects: SAMPLE_PROSPECTS, deals: [], board: DEFAULT_BOARD };
+
+  it('finds the highest generated id anywhere in the workspace', () => {
+    const deal = { id: 'dl-212', sightings: [{ id: 'st-230' }, { id: 'st-verify-a1b2c3d4e5-1' }] };
+    const floor = seqFloor({ ...slices, deals: [deal as unknown as Deal] });
+    expect(floor).toBe(230);
+  });
+
+  it('ignores ids the CLI writes, which cannot collide with the counter', () => {
+    const deal = { id: 'dl-3', sightings: [{ id: 'st-verify-9999999999-1' }] };
+    expect(seqFloor({ ...slices, prospects: [], profile: { ...SAMPLE_PROFILE, channels: [], proofPoints: [] }, deals: [deal as unknown as Deal] })).toBe(3);
+  });
+});
+
+describe('workspaceOf', () => {
+  it('saves the current format and only the fields a file carries', () => {
+    const state = { profile: SAMPLE_PROFILE, terms: DEFAULT_TERMS, prospects: [], deals: [], board: DEFAULT_BOARD, tab: 'deals', seq: 140 };
+    expect(Object.keys(workspaceOf(state)).sort()).toEqual(['board', 'deals', 'profile', 'prospects', 'terms', 'version']);
+    expect(workspaceOf(state).version).toBe(WORKSPACE_VERSION);
   });
 });
