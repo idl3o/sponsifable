@@ -203,15 +203,21 @@ def execute(p: SealPlan, deps: Deps, creator: str) -> dict:
         timestamped_at=stamp.time.isoformat(),
     )
     ledger.write(deps.home, record, notice, signed)
-
-    data = workspace.load(p.workspace_path)
-    deal = workspace.find_deal(data, p.deal["id"])
-    if deal is not None:
-        deal["seal"] = {
-            "serial": body["serial"],
-            "commitment": commit,
-            "sealedOn": deps.today,
-            "timestampedAt": stamp.time.isoformat(),
-        }
-        workspace.save(p.workspace_path, data)
+    _record_on_deal(
+        p,
+        {"serial": body["serial"], "commitment": commit, "sealedOn": deps.today, "timestampedAt": stamp.time.isoformat()},
+    )
     return record
+
+
+def _record_on_deal(p: SealPlan, summary: dict) -> None:
+    """Write the seal onto the deal, without overwriting an edit the app made meanwhile."""
+
+    def record_seal(data: dict) -> bool:
+        deal = workspace.find_deal(data, p.deal["id"])
+        if deal is None:
+            return False
+        deal["seal"] = summary
+        return True
+
+    workspace.update(p.workspace_path, record_seal)

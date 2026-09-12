@@ -87,19 +87,22 @@ def record_sighting(workspace_path: Path, finding: Finding, started_on: date, se
     """Add a verified sighting to the deal. Only a claim that holds is recorded."""
     if finding.kind != "claim" or finding.claim is None or not finding.claim.holds or finding.serial is None:
         return False
-    data = workspace.load(workspace_path)
-    deal = workspace.find_by_serial(data, finding.serial)
-    if deal is None:
-        return False
-    sightings = deal.setdefault("sightings", [])
-    sightings.append(
-        {
-            "id": f"st-verify-{finding.serial}-{len(sightings) + 1}",
-            "source": source,
-            "startedOn": started_on.isoformat(),
-            "seenOn": seen_on.isoformat(),
-            "verified": True,
-        }
-    )
-    workspace.save(workspace_path, data)
-    return True
+    serial = finding.serial
+
+    def add(data: dict) -> bool:
+        deal = workspace.find_by_serial(data, serial)
+        if deal is None:
+            return False
+        sightings = deal.setdefault("sightings", [])
+        sightings.append(
+            {
+                "id": f"st-verify-{serial}-{len(sightings) + 1}",
+                "source": source,
+                "startedOn": started_on.isoformat(),
+                "seenOn": seen_on.isoformat(),
+                "verified": True,
+            }
+        )
+        return True
+
+    return workspace.update(workspace_path, add)
