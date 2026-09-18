@@ -59,11 +59,17 @@ function fakeServer(initial: Workspace | string | null) {
     return new Response(state.file, { status: 200, headers: { 'Content-Type': 'application/json', ETag: etag() } });
   };
 
+  const sent: Response[] = [];
   const fetch = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
     if (state.offline) throw new TypeError('Failed to fetch');
-    if (url === '/api/info') return json(200, { workspacePath: '/home/ada/.sponsorable/workspace.json' });
-    const headers = new Headers(init?.headers);
-    return init?.method === 'PUT' ? put(headers, String(init.body)) : get(headers);
+    const answer =
+      url === '/api/info'
+        ? json(200, { workspacePath: '/home/ada/.sponsorable/workspace.json' })
+        : init?.method === 'PUT'
+          ? put(new Headers(init.headers), String(init.body))
+          : get(new Headers(init?.headers));
+    sent.push(answer);
+    return answer;
   });
 
   /** Something other than the app, such as `sponsorable seal`, writes the file. */
@@ -72,7 +78,9 @@ function fakeServer(initial: Workspace | string | null) {
     state.rev += 1;
   };
   const saved = () => (state.file === null ? null : (JSON.parse(state.file) as Workspace));
-  return { state, fetch, cliWrites, saved, etag };
+  /** Every answer sent, so a test can check none was left with its body unread. */
+  const leftOpen = () => sent.filter((r) => r.body !== null && !r.bodyUsed).length;
+  return { state, fetch, cliWrites, saved, etag, leftOpen };
 }
 
 function makeStore(start: Workspace = SAMPLE): StoreApi<SyncTarget> {
@@ -211,6 +219,20 @@ describe('writing', () => {
     expect(server.saved()?.profile.name).toBe('Sealed by the CLI');
     expect(store.getState().profile.name).toBe('Sealed by the CLI');
     expect(syncStatus.getState().notice).toMatch(/changed on disk/);
+  });
+
+  it('leaves no response body unread, which would hold the request open', async () => {
+    const server = fakeServer(SAMPLE);
+    const store = makeStore();
+    sync(store, server);
+    await settle();
+    rename(store, 'An edit');
+    await settle(500);
+    server.cliWrites(named('Sealed by the CLI'));
+    rename(store, 'A late edit');
+    await settle(500);
+    expect(server.state.puts.length).toBeGreaterThan(1);
+    expect(server.leftOpen()).toBe(0);
   });
 
   it('falls back to this browser, and says so, when the server stops', async () => {

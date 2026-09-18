@@ -37,6 +37,23 @@ async function request(fetcher: Fetch, init?: RequestInit): Promise<Response | n
   }
 }
 
+/**
+ * Read to the end a body this code has no use for.
+ *
+ * A fetch settles as soon as the headers arrive, but the browser holds the
+ * request open until the body is finished. Left undone, every write leaks a
+ * connection in a browser that stays open for a whole stream. These bodies are
+ * a few bytes of JSON, and reading them lets the request finish; cancelling
+ * would abort it instead, which shows up as a failed request.
+ */
+async function drain(response: Response): Promise<void> {
+  try {
+    await response.arrayBuffer();
+  } catch {
+    // Already consumed, or there was no body.
+  }
+}
+
 async function errorOf(response: Response): Promise<string> {
   const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
   return typeof body?.error === 'string' ? body.error : `the server answered ${response.status}`;
@@ -59,7 +76,10 @@ export async function fetchRemote(fetcher: Fetch, etag: string | null): Promise<
   if (response.status === 422) {
     return { kind: 'unreadable', reason: await errorOf(response), etag: response.headers.get('ETag') };
   }
-  if (!response.ok || !isWorkspaceAnswer(response)) return { kind: 'offline' };
+  if (!response.ok || !isWorkspaceAnswer(response)) {
+    await drain(response);
+    return { kind: 'offline' };
+  }
   const tag = response.headers.get('ETag') ?? '';
   const data: unknown = await response.json().catch(() => undefined);
   const parsed = parseWorkspace(data);
@@ -84,10 +104,20 @@ export async function putRemote(
   if (replaceUnreadable) headers['X-Replace-Unreadable'] = '1';
   const response = await request(fetcher, { method: 'PUT', headers, body: JSON.stringify(workspace) });
   if (!response) return { kind: 'offline' };
-  if (response.status === 409) return { kind: 'conflict' };
+  if (response.status === 409) {
+    await drain(response);
+    return { kind: 'conflict' };
+  }
   const etag = response.headers.get('ETag');
-  if (response.ok && etag) return { kind: 'ok', etag };
-  return response.status >= 500 ? { kind: 'offline' } : { kind: 'refused', reason: await errorOf(response) };
+  if (response.ok && etag) {
+    await drain(response);
+    return { kind: 'ok', etag };
+  }
+  if (response.status >= 500) {
+    await drain(response);
+    return { kind: 'offline' };
+  }
+  return { kind: 'refused', reason: await errorOf(response) };
 }
 
 /** Where the server keeps the file, for the status line. Empty when it cannot say. */
