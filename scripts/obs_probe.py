@@ -55,12 +55,19 @@ class Probe:
         elif kind in ("CurrentProgramSceneChanged", "CurrentPreviewSceneChanged", "StudioModeStateChanged", "SceneItemEnableStateChanged"):
             self.report(kind, **data)
 
-    def poll(self, obs: Obs) -> None:
-        """Ask OBS directly and reconcile with what the events said."""
+    def poll(self, obs: Obs, first: bool = False) -> None:
+        """
+        Ask OBS directly and reconcile with what the events said. The first
+        reading only establishes the state: it cannot tell a missed event from
+        a source that was already on screen, so it is not a disagreement.
+        """
         live = obs.request("GetStreamStatus")["outputActive"]
         active = obs.request("GetSourceActive", {"sourceName": self.source})["videoActive"]
         disagreed, change = self.state.poll(live, active, utc_now())
-        if disagreed or change:
+        if first:
+            self.state.disagreements -= disagreed
+            self.report("Poll", live=live, active=active, disagreed=False, baseline=True, onAir=change)
+        elif disagreed or change:
             self.report("Poll", live=live, active=active, disagreed=disagreed, onAir=change)
 
     def summary(self) -> dict:
@@ -68,16 +75,26 @@ class Probe:
         return {"intervals": s.intervals, "openSince": s.since, "disagreements": s.disagreements}
 
 
-def run(obs: Obs, probe: Probe, poll_every: float, polls: int | None = None) -> None:
-    """Report the starting state, then events as they come and a poll whenever it is quiet."""
+def begin(obs: Obs, probe: Probe) -> None:
+    """Report what OBS is, then take the baseline reading."""
     probe.report("Start", source=probe.source, **obs.request("GetVersion"))
-    probe.poll(obs)
+    probe.poll(obs, first=True)
+
+
+def watch(obs: Obs, probe: Probe, poll_every: float, polls: int | None = None) -> None:
+    """Events as they come, and a poll whenever it is quiet. `polls` bounds it for tests."""
     for _ in range(polls) if polls is not None else itertools.count():
         event = obs.next_event(poll_every)
         if event is not None:
             probe.event(event)
         else:
             probe.poll(obs)
+
+
+def run(obs: Obs, probe: Probe, poll_every: float, polls: int | None = None) -> None:
+    """Report the starting state, then watch until interrupted."""
+    begin(obs, probe)
+    watch(obs, probe, poll_every, polls)
 
 
 def main(argv: list[str]) -> int:

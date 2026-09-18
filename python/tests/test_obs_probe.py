@@ -76,7 +76,8 @@ def setup():
 
 
 def drain(obs, p, rounds=6):
-    probe.run(obs, p, poll_every=0, polls=rounds)
+    """One or more loop turns. The baseline reading is taken once, by `begin`, not here."""
+    probe.watch(obs, p, poll_every=0, polls=rounds)
 
 
 def test_subscribes_to_the_high_volume_input_events_that_all_leaves_out(setup):
@@ -86,6 +87,7 @@ def test_subscribes_to_the_high_volume_input_events_that_all_leaves_out(setup):
 
 def test_an_interval_needs_the_stream_live_and_the_source_in_program(setup):
     fake, obs, p, _ = setup
+    probe.begin(obs, p)
     fake.show()
     drain(obs, p)
     assert p.state.since is None, "on screen but not streaming is not on air"
@@ -99,15 +101,27 @@ def test_an_interval_needs_the_stream_live_and_the_source_in_program(setup):
 
 def test_a_missed_activation_event_is_caught_by_the_poll(setup):
     fake, obs, p, lines = setup
+    probe.begin(obs, p)
     fake.go_live()
-    fake.show(tell=False)
+    fake.show(tell=False)            # the signal OBS failed to send
     drain(obs, p)
     assert p.state.since is not None and p.state.disagreements == 1
     assert any(line["kind"] == "Poll" and line["disagreed"] for line in lines)
 
 
+def test_the_first_reading_is_a_baseline_not_a_disagreement(setup):
+    fake, obs, p, lines = setup
+    fake.live, fake.active = True, True  # already streaming with the source up when the probe starts
+    probe.begin(obs, p)
+    drain(obs, p, rounds=2)
+    assert p.state.on_air and p.state.disagreements == 0
+    first = next(line for line in lines if line["kind"] == "Poll")
+    assert first.get("baseline") is True and first["disagreed"] is False
+
+
 def test_other_sources_do_not_move_the_state(setup):
     fake, obs, p, _ = setup
+    probe.begin(obs, p)
     fake.go_live()
     fake.event("InputActiveStateChanged", {"inputName": "Webcam", "videoActive": True})
     drain(obs, p, rounds=1)
@@ -116,5 +130,5 @@ def test_other_sources_do_not_move_the_state(setup):
 
 def test_the_first_line_reports_the_obs_version(setup):
     fake, obs, p, lines = setup
-    drain(obs, p, rounds=0)
+    probe.begin(obs, p)
     assert lines[0]["kind"] == "Start" and lines[0]["obsVersion"] == "32.1.1"
