@@ -9,7 +9,7 @@ import { useStore } from './store/useStore';
  * derived values reach the screen.
  */
 
-const TABS = ['Profile', 'Rate card', 'Media kit', 'Prospects', 'Outreach', 'Deals', 'Shop board'];
+const TABS = ['Profile', 'Rate card', 'An offer', 'Media kit', 'Prospects', 'Outreach', 'Deals', 'Shop board'];
 
 beforeEach(() => {
   useStore.getState().resetToSample();
@@ -159,6 +159,24 @@ describe('App', () => {
 
     expect(localStorage.getItem('sponsorable-unreadable-v0')).toContain('astrology');
     expect(useStore.getState().profile.niche).not.toBe('astrology');
+  });
+
+  it('judges an offer against the card and says what to reply', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'An offer' }));
+    fireEvent.change(screen.getByLabelText(/What they have offered/i), { target: { value: '100' } });
+    expect(screen.getAllByText(/below your walk-away/i).length).toBeGreaterThan(0);
+    const email = document.querySelector('.email')?.textContent ?? '';
+    expect(email).toContain('£100');
+    expect(email).toMatch(/under what this placement sells for/);
+  });
+
+  it('takes a good offer without arguing about it', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'An offer' }));
+    fireEvent.change(screen.getByLabelText(/What they have offered/i), { target: { value: '9000' } });
+    expect(screen.getAllByText(/above your ask/i).length).toBeGreaterThan(0);
+    expect(document.querySelector('.email')?.textContent).toMatch(/that works/i);
   });
 
   it('says the workspace is kept in this browser when no server is syncing it', () => {

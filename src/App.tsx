@@ -4,6 +4,7 @@ import { PRODUCT, TAGLINE } from './brand';
 import { BoardView } from './components/board/BoardView';
 import { DealsView } from './components/DealsView';
 import { MediaKitView } from './components/MediaKitView';
+import { OfferView } from './components/OfferView';
 import { OutreachView } from './components/OutreachView';
 import { ProfileView } from './components/ProfileView';
 import { ProspectsView } from './components/ProspectsView';
@@ -17,6 +18,7 @@ import { useStore } from './store/useStore';
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'profile', label: 'Profile' },
   { id: 'rate-card', label: 'Rate card' },
+  { id: 'offer', label: 'An offer' },
   { id: 'media-kit', label: 'Media kit' },
   { id: 'prospects', label: 'Prospects' },
   { id: 'outreach', label: 'Outreach' },
@@ -164,6 +166,7 @@ export function App() {
       <main>
         {tab === 'profile' && <ProfileView />}
         {tab === 'rate-card' && <RateCardView />}
+        {tab === 'offer' && <OfferView />}
         {tab === 'media-kit' && <MediaKitView />}
         {tab === 'prospects' && <ProspectsView today={today} />}
         {tab === 'outreach' && <OutreachView today={today} />}

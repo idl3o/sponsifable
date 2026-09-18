@@ -14,7 +14,7 @@ import { join } from 'node:path';
 
 const BASE = process.argv[2] ?? 'http://localhost:5180';
 const SHOTS = process.env.PLAYTEST_OUT ?? join(process.cwd(), 'playtest-shots');
-const TABS = ['Profile', 'Rate card', 'Media kit', 'Prospects', 'Outreach', 'Deals', 'Shop board'];
+const TABS = ['Profile', 'Rate card', 'An offer', 'Media kit', 'Prospects', 'Outreach', 'Deals', 'Shop board'];
 
 const problems = [];
 const note = (severity, where, message) => problems.push({ severity, where, message });
