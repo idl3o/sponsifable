@@ -14,7 +14,7 @@ import { join } from 'node:path';
 
 const BASE = process.argv[2] ?? 'http://localhost:5180';
 const SHOTS = process.env.PLAYTEST_OUT ?? join(process.cwd(), 'playtest-shots');
-const TABS = ['Profile', 'Rate card', 'Media kit', 'Prospects', 'Outreach', 'Deals'];
+const TABS = ['Profile', 'Rate card', 'Media kit', 'Prospects', 'Outreach', 'Deals', 'Shop board'];
 
 const problems = [];
 const note = (severity, where, message) => problems.push({ severity, where, message });
@@ -22,7 +22,10 @@ const note = (severity, where, message) => problems.push({ severity, where, mess
 /** Attach console and error listeners that record rather than print. */
 function watch(page, label) {
   page.on('console', (msg) => {
-    if (msg.type() === 'error') note('error', label, `console: ${msg.text().slice(0, 200)}`);
+    // On a first run the app asks for a workspace file that does not exist yet,
+    // and the browser logs that 404. It is the missing file, not a fault.
+    const expected404 = /404/.test(msg.text()) && /api\/workspace/.test(msg.location()?.url ?? '');
+    if (msg.type() === 'error' && !expected404) note('error', label, `console: ${msg.text().slice(0, 200)}`);
     if (msg.type() === 'warning' && /React|key|validate/i.test(msg.text())) {
       note('warning', label, `console: ${msg.text().slice(0, 200)}`);
     }
@@ -31,6 +34,8 @@ function watch(page, label) {
   page.on('requestfailed', (req) => {
     // The Ollama probe is expected to fail when Ollama is not running.
     if (req.url().includes('11434')) return;
+    // A poll still in flight when the page closes is aborted, which is not a fault.
+    if (req.failure()?.errorText === 'net::ERR_ABORTED') return;
     note('warning', label, `request failed: ${req.url().slice(0, 120)}`);
   });
 }
@@ -58,9 +63,11 @@ async function checkOverflow(page, where) {
 /** Check that no interactive control is too small to hit on a phone. */
 async function checkTapTargets(page, where) {
   const small = await page.evaluate(() => {
+    // A control wrapped in a label is hit by tapping the label, so measure that.
+    const box = (el) => (el.closest('label') ?? el).getBoundingClientRect();
     return [...document.querySelectorAll('button, select, input, a')]
       .filter((el) => {
-        const r = el.getBoundingClientRect();
+        const r = box(el);
         return r.width > 0 && r.height > 0 && r.height < 28;
       })
       .slice(0, 5)
@@ -96,6 +103,37 @@ async function sweep(page, label, shotPrefix) {
       fullPage: true,
     });
   }
+}
+
+/**
+ * The overlay OBS would load for a won deal.
+ *
+ * It only draws when a server owns the workspace file, so against a bare
+ * `npm run dev` this reports that it was skipped rather than failing.
+ */
+async function checkOverlay(page, context, dealId) {
+  const served = await page.getByText('Saved to the workspace file').isVisible().catch(() => false);
+  if (!served || !dealId) {
+    note('warning', 'desktop/overlay', served ? 'no deal id to check the overlay with' : 'skipped: no workspace server, run `npm run dev:api`');
+    return;
+  }
+  const overlay = await context.newPage();
+  watch(overlay, 'overlay');
+  await overlay.setViewportSize({ width: 1280, height: 720 });
+  await overlay.goto(`${BASE}/overlay.html?deal=${dealId}`);
+  const badge = overlay.locator('.ad-badge');
+  const drawn = await badge.waitFor({ state: 'visible', timeout: 8000 }).then(() => true).catch(() => false);
+  if (!drawn) {
+    note('error', 'desktop/overlay', `no badge drawn for ${dealId}`);
+  } else {
+    const text = await badge.innerText();
+    if (!/^Ad\b/i.test(text)) note('error', 'desktop/overlay', `overlay draws no ad label: ${text}`);
+    if (/£|\d{3,}/.test(text)) note('error', 'desktop/overlay', `overlay carries a number that could be a price: ${text}`);
+  }
+  const body = await overlay.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  if (body !== 'rgba(0, 0, 0, 0)') note('error', 'desktop/overlay', `overlay page is not transparent: ${body}`);
+  await overlay.screenshot({ path: join(SHOTS, 'obs-overlay.png'), omitBackground: true });
+  await overlay.close();
 }
 
 /** Type a nano creator's real numbers into the profile. */
@@ -193,6 +231,9 @@ const run = async () => {
   }
   await checkNumbers(page, 'desktop/deals');
   await page.screenshot({ path: join(SHOTS, 'deals-overrun.png'), fullPage: true });
+
+  // --- the OBS overlay, if this run is against the server that owns the file ---
+  await checkOverlay(page, desktop, (rights.match(/sponsorable seal (dl-\d+)/) ?? [])[1]);
   await page.getByRole('tab', { name: 'Rate card' }).click();
   await page.getByLabel('Usage rights').selectOption('organic-only');
 
