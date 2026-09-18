@@ -3,6 +3,7 @@
     sponsorable                     serve the app on this machine
     sponsorable seal DEAL FILE      establish rights on a won deal, before delivery
     sponsorable verify FILE         check a downloaded ad against your seals
+    sponsorable log DEAL            record when a deal's overlay was on air, from OBS
     sponsorable key --ssh PATH      choose the SSH key that signs your receipts
     sponsorable setup               download the watermark model now
 """
@@ -10,7 +11,10 @@
 from __future__ import annotations
 
 import argparse
+import getpass
 import importlib.util
+import json
+import os
 import secrets
 import sys
 from datetime import date
@@ -72,6 +76,13 @@ def _parser() -> argparse.ArgumentParser:
     verify.add_argument("--seen", type=_iso, default=date.today(), help="the date you saw it still running (default today)")
     verify.add_argument("--source", default="", help="where you found it, e.g. the ad library link")
     verify.add_argument("--workspace", type=Path, help=f"{_WORKSPACE_HELP}; a verified sighting is recorded there")
+
+    log = sub.add_parser("log", help="record when a deal's placement was on air, from OBS")
+    log.add_argument("deal", help="deal id, shown in the app's Deals tab, e.g. dl-104")
+    log.add_argument("--source", default="Sponsor overlay", help="the browser source's name in OBS")
+    log.add_argument("--url", default="ws://127.0.0.1:4455", help="where OBS's WebSocket server is listening")
+    log.add_argument("--poll", type=float, default=2.0, help="seconds of quiet before asking OBS directly")
+    log.add_argument("--workspace", type=Path, help=_WORKSPACE_HELP)
 
     key = sub.add_parser("key", help="choose or show the SSH key that signs your receipts")
     key.add_argument("--ssh", type=Path, help="path to your SSH private key, e.g. ~/.ssh/id_ed25519")
@@ -172,6 +183,58 @@ def _verify(args: argparse.Namespace, home: Path) -> int:
     return 0 if finding.kind == "claim" and finding.claim and finding.claim.holds else 2
 
 
+def _log_deal(args: argparse.Namespace, home: Path) -> dict | None:
+    """The deal this log belongs to, or None with the reason printed."""
+    path = _workspace(args, home)
+    if not path.exists():
+        print(f"No workspace at {path}. Run `sponsorable serve` and open the app once.", file=sys.stderr)
+        return None
+    deal = workspace.find_deal(workspace.load(path), args.deal)
+    if deal is None:
+        print(f"No deal {args.deal} in {path}.", file=sys.stderr)
+        return None
+    if deal.get("outcome") != "won":
+        print(f"{args.deal} is not a won deal, so there is nothing to deliver.", file=sys.stderr)
+        return None
+    return deal
+
+
+def _log(args: argparse.Namespace, home: Path) -> int:
+    """Follow OBS and append every on-air transition to the deal's log."""
+    from websockets.sync.client import connect
+
+    from . import onair
+    from .obs import Obs
+
+    if _log_deal(args, home) is None:
+        return 1
+    path = onair.log_path(home, args.deal)
+    password = os.environ.get("OBS_WEBSOCKET_PASSWORD") or getpass.getpass("OBS WebSocket password (blank if none): ") or None
+
+    def write(line: dict) -> None:
+        onair.append(path, line)
+        print(json.dumps(line, ensure_ascii=False), flush=True)
+
+    session = onair.Session(args.deal, args.source, write)
+    print(f"Watching \"{args.source}\" for {args.deal}. Ctrl+C to stop. Appending to {path}")
+    try:
+        with connect(args.url, open_timeout=5) as socket:
+            obs = Obs(socket, session.event)
+            obs.identify(password)
+            onair.follow(obs, session, args.poll)
+    except KeyboardInterrupt:
+        session.end()
+    except (OSError, RuntimeError) as error:
+        print(f"OBS: {error}. Is the WebSocket server switched on, under Tools?", file=sys.stderr)
+        return 1
+    summary = onair.delivery(onair.read_log(path))
+    minutes = summary.total_seconds / 60
+    print(f"\nOn air {minutes:.1f} minutes across {len(summary.intervals)} intervals.")
+    if summary.disagreements:
+        print(f"{summary.disagreements} polls disagreed with OBS's events. The report will say so.")
+    return 0
+
+
 def _key(args: argparse.Namespace, home: Path) -> int:
     """Choose or show the SSH key that signs receipts."""
     try:
@@ -207,6 +270,8 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(_seal(args, home))
     elif args.command == "verify":
         sys.exit(_verify(args, home))
+    elif args.command == "log":
+        sys.exit(_log(args, home))
     elif args.command == "key":
         sys.exit(_key(args, home))
     elif args.command == "setup":

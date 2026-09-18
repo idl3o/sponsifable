@@ -30,6 +30,8 @@ dependencies = [
   "rfc3161ng>=2.1",
   "imagehash>=4.3",
   "c2pa-python>=0.37",
+  # OBS's WebSocket, for the on-air log. Pure Python, no build step.
+  "websockets>=13",
 ]
 
 [project.optional-dependencies]
