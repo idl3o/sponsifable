@@ -38,7 +38,6 @@ The GitHub repository was renamed to `idl3o/sponsifable` the same day, and the o
 ## Still to do
 
 - **Reserve `sponsifable`** on PyPI and TestPyPI before the first release, and set up trusted publishing for it (see `docs/RELEASING.md`).
-- **Search the UK trademark register.** This has not been done for any candidate, and it is the check that matters legally.
 
 ## Names checked and rejected
 
@@ -59,7 +58,9 @@ The GitHub repository was renamed to `idl3o/sponsifable` the same day, and the o
 
 On 18 September 2026: free on PyPI, TestPyPI and npm; the GitHub account was free; Companies House returned no results; a web search found no company, product or trademark, only the archaic dictionary word *sponsible*; and sponsifable.com, .io, .co.uk and .app did not resolve.
 
-**The known risk.** [Sponsara.ai](https://sponsara.ai/) sells "AI sponsorship intelligence" for YouTube influencers — the same services class, one letter and a stress pattern away. An examiner or an opponent would look at that pair. A professional search is worth commissioning before any application.
+On the same day the author checked the UK trademark register and found the name available. That is the check that matters legally, and it was the one no earlier candidate had.
+
+**The known risk.** [Sponsara.ai](https://sponsara.ai/) sells "AI sponsorship intelligence" for YouTube influencers — the same services class, one letter and a stress pattern away. Availability on the register does not settle a likelihood-of-confusion objection from an existing trader; if an application is ever made, that pair is what an examiner or an opponent would look at.
 
 ## How to check the next one
 
