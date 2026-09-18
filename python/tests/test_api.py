@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from sponsorable import api, workspace
-from sponsorable.serve import make_server
+from sponsifable import api, workspace
+from sponsifable.serve import make_server
 
 PORT = 5180
 ORIGIN = f"http://127.0.0.1:{PORT}"

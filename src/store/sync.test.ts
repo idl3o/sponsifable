@@ -7,7 +7,7 @@ import { SAMPLE_PROFILE, SAMPLE_PROSPECTS } from './sample';
 import { SEEN_KEY, startSync, syncStatus, type SyncTarget } from './sync';
 
 /**
- * The sync against an in-memory stand-in for `sponsorable serve`, which keeps
+ * The sync against an in-memory stand-in for `sponsifable serve`, which keeps
  * the same rules: an ETag per revision, compare-and-swap writes, 404 with
  * `missing` when there is no file, 422 when the file is not JSON.
  */
@@ -64,7 +64,7 @@ function fakeServer(initial: Workspace | string | null) {
     if (state.offline) throw new TypeError('Failed to fetch');
     const answer =
       url === '/api/info'
-        ? json(200, { workspacePath: '/home/ada/.sponsorable/workspace.json' })
+        ? json(200, { workspacePath: '/home/ada/.sponsifable/workspace.json' })
         : init?.method === 'PUT'
           ? put(new Headers(init.headers), String(init.body))
           : get(new Headers(init?.headers));
@@ -72,7 +72,7 @@ function fakeServer(initial: Workspace | string | null) {
     return answer;
   });
 
-  /** Something other than the app, such as `sponsorable seal`, writes the file. */
+  /** Something other than the app, such as `sponsifable seal`, writes the file. */
   const cliWrites = (workspace: Workspace) => {
     state.file = JSON.stringify(workspace);
     state.rev += 1;
@@ -136,7 +136,7 @@ describe('starting', () => {
     sync(store, server);
     await settle();
     expect(store.getState().profile.name).toBe('From the file');
-    expect(syncStatus.getState()).toMatchObject({ mode: 'file', path: '/home/ada/.sponsorable/workspace.json' });
+    expect(syncStatus.getState()).toMatchObject({ mode: 'file', path: '/home/ada/.sponsifable/workspace.json' });
     expect(server.state.puts).toHaveLength(0);
   });
 

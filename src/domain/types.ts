@@ -1,5 +1,5 @@
 /**
- * Core domain vocabulary for Sponsorable.
+ * Core domain vocabulary for Sponsifable.
  *
  * Everything here is plain data: no clock reads, no randomness, no I/O.
  * The pricing and scoring engines are pure functions over these shapes, so a
@@ -273,7 +273,7 @@ export interface Deal {
 }
 
 /**
- * What the `sponsorable seal` CLI records about a sealed asset. The full signed
+ * What the `sponsifable seal` CLI records about a sealed asset. The full signed
  * receipt lives in the CLI's ledger and with the sponsor; this is enough for
  * the app to show the deal is sealed and to match a verified sighting.
  */
@@ -297,7 +297,7 @@ export interface Sighting {
   /** The date it was last seen still running. */
   seenOn: string;
   /**
-   * True only when `sponsorable verify` decoded the watermark and checked the
+   * True only when `sponsifable verify` decoded the watermark and checked the
    * timestamp. A sighting without it is still a claim the contract supports;
    * it is just not evidence a sponsor cannot argue with.
    */

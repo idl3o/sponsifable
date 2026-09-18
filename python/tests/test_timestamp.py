@@ -3,12 +3,16 @@
 The fixture is a DigiCert token over SHA-256("sponsorable api probe"),
 captured once. It lets these tests check parsing and signature verification
 without touching the network.
+
+The digest keeps the product's old name on purpose: those are the bytes the
+authority actually signed in September 2026, and no rename can change what a
+timestamp covers.
 """
 
 import hashlib
 from pathlib import Path
 
-from sponsorable.timestamp import Stamp, token_digest, token_time, token_valid
+from sponsifable.timestamp import Stamp, token_digest, token_time, token_valid
 
 TOKEN = (Path(__file__).parent / "fixtures" / "digicert-probe.tsr").read_bytes()
 DIGEST = hashlib.sha256(b"sponsorable api probe").digest()

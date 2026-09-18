@@ -213,7 +213,7 @@ const run = async () => {
   await page.waitForTimeout(200);
   await page.getByRole('button', { name: 'Delivery, rights and sightings' }).first().click();
   const rights = await page.locator('main').innerText();
-  if (!/sponsorable seal dl-\d+/.test(rights)) {
+  if (!/sponsifable seal dl-\d+/.test(rights)) {
     note('error', 'desktop/deals', 'unsealed won deal does not say how to seal it');
   }
   await page.getByLabel('Started running').fill('2026-10-01');
@@ -233,7 +233,7 @@ const run = async () => {
   await page.screenshot({ path: join(SHOTS, 'deals-overrun.png'), fullPage: true });
 
   // --- the OBS overlay, if this run is against the server that owns the file ---
-  await checkOverlay(page, desktop, (rights.match(/sponsorable seal (dl-\d+)/) ?? [])[1]);
+  await checkOverlay(page, desktop, (rights.match(/sponsifable seal (dl-\d+)/) ?? [])[1]);
   await page.getByRole('tab', { name: 'Rate card' }).click();
   await page.getByLabel('Usage rights').selectOption('organic-only');
 

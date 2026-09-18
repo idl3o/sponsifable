@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
-import { useStore } from './store/useStore';
+import { adoptRenamedSave, useStore } from './store/useStore';
 
 /**
  * Smoke tests: every tab mounts, and the numbers a creator acts on actually
@@ -142,7 +142,7 @@ describe('App', () => {
     const { profile, terms, prospects } = useStore.getState();
     const old = { ...profile, name: 'Saved Before Deals Existed' };
     localStorage.setItem(
-      'sponsorable-v1',
+      'sponsifable-v1',
       JSON.stringify({ state: { profile: old, terms, prospects, seq: 140 }, version: 0 }),
     );
     await useStore.persist.rehydrate();
@@ -154,11 +154,27 @@ describe('App', () => {
 
   it('sets an unreadable save aside instead of discarding it', async () => {
     const corrupt = { state: { profile: { niche: 'astrology' }, prospects: [] }, version: 0 };
-    localStorage.setItem('sponsorable-v1', JSON.stringify(corrupt));
+    localStorage.setItem('sponsifable-v1', JSON.stringify(corrupt));
     await useStore.persist.rehydrate();
 
-    expect(localStorage.getItem('sponsorable-unreadable-v0')).toContain('astrology');
+    expect(localStorage.getItem('sponsifable-unreadable-v0')).toContain('astrology');
     expect(useStore.getState().profile.niche).not.toBe('astrology');
+  });
+
+  it('adopts a save written before the rename, so browser-only work is not stranded', async () => {
+    const { profile, terms, prospects } = useStore.getState();
+    const older = { ...profile, name: 'Saved Before The Rename' };
+    localStorage.removeItem('sponsifable-v1');
+    localStorage.setItem(
+      'sponsorable-v1',
+      JSON.stringify({ state: { profile: older, terms, prospects, seq: 150 }, version: 4 }),
+    );
+    adoptRenamedSave();
+    await useStore.persist.rehydrate();
+
+    expect(useStore.getState().profile.name).toBe('Saved Before The Rename');
+    // The old save is left where it is, rather than moved.
+    expect(localStorage.getItem('sponsorable-v1')).toContain('Saved Before The Rename');
   });
 
   it('judges an offer against the card and says what to reply', () => {

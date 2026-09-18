@@ -29,10 +29,10 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from sponsorable.obs import Obs, OnAir, utc_now
+    from sponsifable.obs import Obs, OnAir, utc_now
 except ModuleNotFoundError:  # a checkout without the package installed
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "python"))
-    from sponsorable.obs import Obs, OnAir, utc_now
+    from sponsifable.obs import Obs, OnAir, utc_now
 
 class Probe:
     """Feeds OBS events and polls into OnAir and reports each line."""

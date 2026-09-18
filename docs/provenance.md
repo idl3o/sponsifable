@@ -1,12 +1,12 @@
 # Provenance for delivered media
 
-A creator who sells usage rights is selling something they cannot currently enforce. "Paid whitelisting, 30 days" is a promise, and a sponsor who keeps the ad running on day 90 has, in practice, bought the ninety-day licence at the thirty-day price. This document describes how Sponsorable lets a creator establish, at the moment of delivery, which file was licensed on which terms, and later demonstrate that a running ad is that file.
+A creator who sells usage rights is selling something they cannot currently enforce. "Paid whitelisting, 30 days" is a promise, and a sponsor who keeps the ad running on day 90 has, in practice, bought the ninety-day licence at the thirty-day price. This document describes how Sponsifable lets a creator establish, at the moment of delivery, which file was licensed on which terms, and later demonstrate that a running ad is that file.
 
 It is designed for a creator who self-hosts on a small budget: every component is free, runs locally, and needs no account.
 
 ## Two requirements
 
-**Sealing is opt-in.** Nothing is watermarked by default. A creator who wishes to establish rights on a deal runs `sponsorable seal` against that deal, reads a confirmation listing exactly what will be bound, and agrees. The web app never seals anything.
+**Sealing is opt-in.** Nothing is watermarked by default. A creator who wishes to establish rights on a deal runs `sponsifable seal` against that deal, reads a confirmation listing exactly what will be bound, and agrees. The web app never seals anything.
 
 **Sealing cannot be applied retroactively.** A creator must not be able to watermark a file after the fact and claim it was licensed on terms that suit them.
 
@@ -42,23 +42,23 @@ The receipt is canonical JSON with sorted keys:
 | `perceptualHash` | A pHash of the delivered file, for matching re-encoded copies when a watermark has not survived. |
 | `publicKey` | The creator's OpenSSH public key. Its SHA256 fingerprint belongs in the contract or invoice, which is what makes a key nobody else vouches for sufficient: the sponsor already knows who they contracted with. |
 
-The **commitment** is the SHA-256 of that canonical JSON, and a timestamp authority timestamps it. The creator signs the same bytes with their own SSH key, using OpenSSH's signature format (SSHSIG, namespace `sponsorable-receipt`). The receipt, the signature and the timestamp token together form the seal.
+The **commitment** is the SHA-256 of that canonical JSON, and a timestamp authority timestamps it. The creator signs the same bytes with their own SSH key, using OpenSSH's signature format (SSHSIG, namespace `sponsifable-receipt`). The receipt, the signature and the timestamp token together form the seal.
 
 ## Signing with the creator's SSH key
 
-Sponsorable holds no signing key of its own. `ssh-keygen -Y sign` does the signing, so a passphrase, ssh-agent or a hardware key (`ed25519-sk`) protects the key exactly as it protects the creator's server logins, and Sponsorable never reads the private half. Three things follow:
+Sponsifable holds no signing key of its own. `ssh-keygen -Y sign` does the signing, so a passphrase, ssh-agent or a hardware key (`ed25519-sk`) protects the key exactly as it protects the creator's server logins, and Sponsifable never reads the private half. Three things follow:
 
 - **The sponsor can check a receipt with nothing from this project.** The notice carries an `allowed_signers` line and the `ssh-keygen -Y verify` command. OpenSSH ships with Windows, macOS and Linux. A receipt the other party can verify only with the creator's own software would be worth less.
 - **Identity can be checked against something public.** A technical creator has usually published their key at `github.com/<user>.keys`. The contract's fingerprint remains the binding link; the public key is corroboration.
 - **The namespace stops replay.** A signature made for a receipt cannot be presented as a signature over anything else, and the reverse.
 
-Ed25519 SSH signatures are produced and checked in `python/sponsorable/sshsig.py` directly, byte-compatible with OpenSSH in both directions; the tests prove it against the installed `ssh-keygen`. Other key types are signed and checked by `ssh-keygen`. A C2PA manifest carrying the same terms as IPTC rights metadata is embedded in the delivered file, for anyone whose pipeline preserves it. Most platforms strip it, which is why the watermark exists.
+Ed25519 SSH signatures are produced and checked in `python/sponsifable/sshsig.py` directly, byte-compatible with OpenSSH in both directions; the tests prove it against the installed `ssh-keygen`. Other key types are signed and checked by `ssh-keygen`. A C2PA manifest carrying the same terms as IPTC rights metadata is embedded in the delivered file, for anyone whose pipeline preserves it. Most platforms strip it, which is why the watermark exists.
 
 ## The one network call
 
 Sealing sends one SHA-256 digest to an RFC 3161 timestamp authority, DigiCert's free one by default. The digest reveals nothing about the deal, because the receipt is salted. The call happens only when the creator has chosen to seal, and the confirmation says so before it happens. A creator who never seals never makes it.
 
-That is the only call carrying anything derived from the creator's data. The one other network access is a one-off download of TrustMark's model weights from Adobe's host, the first time the watermark is used. It sends nothing about the creator, and `sponsorable setup` does it deliberately, ahead of time, rather than in the middle of a seal.
+That is the only call carrying anything derived from the creator's data. The one other network access is a one-off download of TrustMark's model weights from Adobe's host, the first time the watermark is used. It sends nothing about the creator, and `sponsifable setup` does it deliberately, ahead of time, rather than in the middle of a seal.
 
 ## Disclosed, not covert
 
@@ -71,7 +71,7 @@ The receipt tells the sponsor that the file carries a watermark and what terms i
 
 ## Checking a sighting
 
-`sponsorable verify` takes an ad file downloaded from a public ad library and the date the library says it started running. It decodes the serial, finds the receipt, checks the signature, the timestamp and the ordering, and reports the facts: which deal, which terms, how many days of paid running were permitted, and how many the sighting shows.
+`sponsifable verify` takes an ad file downloaded from a public ad library and the date the library says it started running. It decodes the serial, finds the receipt, checks the signature, the timestamp and the ordering, and reports the facts: which deal, which terms, how many days of paid running were permitted, and how many the sighting shows.
 
 It does not price the overrun. Every market assumption lives in `src/domain/benchmarks.ts`, so the extension invoice is composed in the web app from the verified facts. Paid usage is sold by the 30-day period, so the overrun is the further periods the sponsor took, each at the per-period rate the licence was priced on, scaled by the discount already negotiated and never below the per-period minimum.
 
@@ -92,7 +92,7 @@ The design is theory until the watermark survives the real path. `scripts/surviv
 | Colour grade | 100% | 96% | 96% |
 | H.264 1080p crf 23, 720p crf 28 | 100% | 96%, 88% | 96% |
 
-Sponsorable uses **model Q with the 40-bit BCH_SUPER schema.** It survived everything except reframing. So the rule is: **seal each aspect ratio you deliver.** A sponsor who reframes your landscape file into a portrait ad themselves will defeat the mark, and the pHash comparison is all that remains.
+Sponsifable uses **model Q with the 40-bit BCH_SUPER schema.** It survived everything except reframing. So the rule is: **seal each aspect ratio you deliver.** A sponsor who reframes your landscape file into a portrait ad themselves will defeat the mark, and the pHash comparison is all that remains.
 
 **Decoding is strict.** TrustMark detects the error-correction schema from the payload itself, and 8 of 400 unmarked images decoded as "present" under one of the weaker schemas. Accepting only BCH_SUPER at exactly 40 bits took that to none of 400. `verify` also requires the serial to be in the creator's own ledger, so a false positive would additionally have to hit one of their issued serials.
 
@@ -115,4 +115,4 @@ A proxy is not a platform. The go or no-go test is manual and belongs to the cre
 - **Automated monitoring of ad libraries.** The APIs require identity verification and cover limited ground. Detection is a person downloading an ad and running `verify`.
 - **Attesting the media kit's statistics.** A creator signing their own view counts proves nothing. Only attestation from the platform would, and that needs the OAuth and platform APIs the project declines.
 - **Proving identity to strangers.** The C2PA chain shows as an unrecognised signer to any validator, and the SSH key is vouched for by nobody but the creator and, where published, their GitHub account. The trust that matters here is bilateral and is established by the contract.
-- **Holding the creator's key.** Sponsorable never reads or stores a private signing key. OpenSSH does that job.
+- **Holding the creator's key.** Sponsifable never reads or stores a private signing key. OpenSSH does that job.

@@ -1,4 +1,4 @@
-# Sponsorable — working notes
+# Sponsifable — working notes
 
 ## Decisions, not accidents — do not undo
 
@@ -16,18 +16,18 @@
 - **Paid usage is per 30-day period**, as `max(share × organic, minimum)` per period, or the declared-spend share where that is larger. A buyout is the placement again, never below six periods at the minimum. The overrun invoice uses the same per-period rate.
 - **The introductory rate lapses with the first result.** `hasResults(profile)` gates it inside the pricing engine, not just the UI, and the pitch names it as a trade. It is the only path that prices below the production floor.
 - **Direction, 2026-09-11: a full pivot to an OBS tool for streamers.** It covers everything both sides of *one* sponsorship deal need: an offer evaluator over the existing engine, the sponsor overlay as an OBS browser source served by the local server, an on-screen log read from OBS's built-in WebSocket (not timed in the overlay page), a signed delivery report, and payment. Still not a marketplace: matchmaking belongs to StreamElements and Twitch's Sponsorship Dashboard. The work starts on its own branch after the spring clean. It moves the source of truth from browser storage to the workspace file, because OBS's embedded browser keeps separate storage (built; see "Workspace and server" below), and it replaces the audience line below deliberately rather than by drift.
-- **The name is under review.** Prose goes through `PRODUCT` in `src/brand.ts` and `python/sponsorable/brand.py`; identifiers stay until a rename is decided. "Sponsoar" is taken by an active UK sponsorship company. See `docs/rename.md` before proposing a name.
+- **Renamed to Sponsifable on 2026-09-18, identifiers included** (`docs/rename.md`). It was done in one pass because every migration was a no-op that day: nothing published, no receipts signed, no home directory in existence. Prose goes through `PRODUCT` in `src/brand.ts` and `python/sponsifable/brand.py`. Three things keep the old name on purpose, and each has its reason written down: the GitHub repository until Sam renames it, the archive paper's colophon, and the timestamp fixture's digest, which covers the bytes an authority actually signed. "Sponsoar" and "Sponsify" were checked and rejected; the UK trademark register has never been searched.
 - **The first audience is the low-budget, self-hosting, technical creator.** Tech, B2B and developer-tools creators, newsletter writers, maintainers with an audience. Distribution is one `pipx install` that serves the app on localhost and carries the `seal` CLI. Do not claim to serve UGC creators generally until the tool reaches people who will not open a terminal.
 
 ### Provenance (see `docs/provenance.md`)
 
-- **Sealing is opt-in.** Only an explicit `sponsorable seal`, with a confirmation, watermarks anything. The web app never seals.
+- **Sealing is opt-in.** Only an explicit `sponsifable seal`, with a confirmation, watermarks anything. The web app never seals.
 - **Sealing cannot be retroactive, and the evidence enforces it, not the app.** A claim needs the watermark in the ad itself, a timestamp earlier than the ad's start date, and a receipt the sponsor has held since delivery. The CLI's refusal to seal lost, delivered or already-sealed deals only catches mistakes. Never add a path that seals an existing file or backdates a record.
 - **The watermark carries a serial, never the terms.** A payload under 100 bits allows a birthday search for alternative terms. The terms live in the signed receipt.
-- **Sealing is the only network call that carries anything derived from the creator's data.** One salted SHA-256 digest goes to an RFC 3161 timestamp authority, opt-in per deal, and the confirmation says so first. The only other access is TrustMark's one-off model download (`sponsorable setup`), which sends nothing about the creator.
+- **Sealing is the only network call that carries anything derived from the creator's data.** One salted SHA-256 digest goes to an RFC 3161 timestamp authority, opt-in per deal, and the confirmation says so first. The only other access is TrustMark's one-off model download (`sponsifable setup`), which sends nothing about the creator.
 - **Seal each aspect ratio delivered.** The survival proxy shows model Q / BCH_SUPER survives compression, downscaling, crops, banners, grading and H.264, and fails on reframing a landscape to 4:5 or 9:16. Do not switch model or schema without rerunning `scripts/survival.py`.
 - **The licence window is frozen on the deal** (`Deal.paidUsageDays`, null for unlimited). Python reads it from the deal; never copy `PAID_USAGE_DAYS` into Python.
-- **Receipts are signed with the creator's SSH key through `ssh-keygen -Y sign`** (SSHSIG, namespace `sponsorable-receipt`). Sponsorable never reads or stores the private key; passphrases, agents and hardware keys are OpenSSH's job. The sponsor verifies with stock `ssh-keygen`. Do not reintroduce a Sponsorable-held signing key, and keep `sshsig.py` byte-compatible with OpenSSH: `test_sshsig.py` checks both directions against the installed binary.
+- **Receipts are signed with the creator's SSH key through `ssh-keygen -Y sign`** (SSHSIG, namespace `sponsifable-receipt`). Sponsifable never reads or stores the private key; passphrases, agents and hardware keys are OpenSSH's job. The sponsor verifies with stock `ssh-keygen`. Do not reintroduce a Sponsifable-held signing key, and keep `sshsig.py` byte-compatible with OpenSSH: `test_sshsig.py` checks both directions against the installed binary.
 - **`--source` is required on `seal`.** The tool cannot know how an asset was made, and C2PA's claim of creation states it. No default.
 - **Disclosed, not covert.** The receipt tells the sponsor the file is marked.
 - **A missing watermark proves nothing.** TrustMark ships a removal model. No copy may treat absence as evidence.
@@ -47,19 +47,19 @@
 
 ### Workspace and server (built 2026-09-12)
 
-- **The workspace file is the source of truth.** `~/.sponsorable/workspace.json` (under `SPONSORABLE_HOME`), owned by `sponsorable serve` and served at `/api/workspace`. The browser's localStorage is a cache, and the whole save only when the app runs without the server. `seal` and `verify` default to the same file.
+- **The workspace file is the source of truth.** `~/.sponsifable/workspace.json` (under `SPONSIFABLE_HOME`), owned by `sponsifable serve` and served at `/api/workspace`. The browser's localStorage is a cache, and the whole save only when the app runs without the server. `seal` and `verify` default to the same file.
 - **Every write is a compare-and-swap on a content hash.** The ETag is the SHA-256 of the file's bytes, so the CLI and the server need no coordination. `workspace.update()` reruns the CLI's change on a file that moved. Never add an unconditional write path.
 - **The server's guards are the security model:** the Host header must be `127.0.0.1:<port>` or `localhost:<port>` (DNS rebinding); a write needs the server's own `Origin` (or an `--allow-origin`) and JSON; no CORS header, ever. `test_api.py` locks each one.
 - **An unreadable file is never written automatically.** Only an explicit Import replaces it, and the server copies it to `workspace.unreadable-<rev>.json` first.
 - **No merge on conflict.** A refused write reloads the file and tells the creator. Python only touches `deal.seal` and `deal.sightings`, and refetch on focus closes most of the window.
-- **No reconnecting mid-session.** An app that fell back to browser-only stays there until reloaded, because a server that appeared later would replace the edits made meanwhile. On start, if the file's revision equals the one this browser last saw (`sponsorable-sync-revision`), the browser's copy is written up rather than replaced.
+- **No reconnecting mid-session.** An app that fell back to browser-only stays there until reloaded, because a server that appeared later would replace the edits made meanwhile. On start, if the file's revision equals the one this browser last saw (`sponsifable-sync-revision`), the browser's copy is written up rather than replaced.
 - **The overlay never draws a price and always draws the disclosure.** `OverlayView` has no price field, and `overlayFor` always sets `disclosure: 'Ad'`. The ASA, CMA and FTC require it, and the creator is the one who answers for a missing label.
 - **The overlay fails silently.** A failed read keeps the last good frame; an overlay that never loaded draws nothing. It asks OBS for no permissions and times nothing.
 - **The overlay URL uses `/overlay.html`,** not the server's `/overlay` alias, so it also works under Vite.
-- **The on-air log is append-only, and lives beside the ledger,** at `~/.sponsorable/onair/<deal>.jsonl`, never inside the workspace: it grows per stream and it is evidence. `onair.delivery()` is the only reader of its shape, so the app and a delivery report cannot count differently.
+- **The on-air log is append-only, and lives beside the ledger,** at `~/.sponsifable/onair/<deal>.jsonl`, never inside the workspace: it grows per stream and it is evidence. `onair.delivery()` is the only reader of its shape, so the app and a delivery report cannot count differently.
 - **On air means live *and* in the program feed.** Showing in preview is not being broadcast. Events are prompts; the `GetSourceActive` poll is the arbiter, because activation signals have been unreliable in studio mode. Every disagreement is recorded and the summary carries the count. Never smooth them away.
 - **An interval's offset into the VOD is null unless the logger saw the stream start.** The log's job is to be an index into the recording, and an offset from a start nobody saw is a guess.
-- **`python/sponsorable/obs.py` is the one copy of the protocol layer.** `scripts/obs_probe.py` imports it, falling back to adding `python/` to `sys.path` when the package is not installed.
+- **`python/sponsifable/obs.py` is the one copy of the protocol layer.** `scripts/obs_probe.py` imports it, falling back to adding `python/` to `sys.path` when the package is not installed.
 - `src/store/sync.ts` and `src/store/workspaceClient.ts` are the I/O edge for the workspace, outside `src/domain`. `sync.ts` takes its fetch, storage and focus hook as arguments, so it is tested in node.
 
 ## Gotchas already resolved — do not regress
@@ -75,7 +75,7 @@
 - `updateChannel` resets `formats` when the platform changes. That is deliberate: a YouTube format list on a TikTok channel prices nonsense.
 - The play test (`node scripts/playtest.mjs`) drives the installed Chrome via `channel: 'chrome'`, because the bundled Playwright build does not match the browsers on this machine. Do not swap it back to `chromium.launch()` without running `npx playwright install`.
 - Channel cards and proof points both render a button labelled "Remove". Any selector for one must exclude the other.
-- **Workspace format changes go through `src/domain/workspace.ts`.** Bump `WORKSPACE_VERSION`, teach `parseWorkspace` the old shape, and bump `SUPPORTED_VERSION` in `python/sponsorable/workspace.py`. The localStorage key stays `sponsorable-v1` on purpose; `persist.version` tracks the format. An unreadable save is copied to `sponsorable-unreadable-v<n>`, never dropped. The file's `version` must equal `SUPPORTED_VERSION`, or the server refuses the write.
+- **Workspace format changes go through `src/domain/workspace.ts`.** Bump `WORKSPACE_VERSION`, teach `parseWorkspace` the old shape, and bump `SUPPORTED_VERSION` in `python/sponsifable/workspace.py`. The localStorage key stays `sponsifable-v1` on purpose; `persist.version` tracks the format. An unreadable save is copied to `sponsifable-unreadable-v<n>`, never dropped. The file's `version` must equal `SUPPORTED_VERSION`, or the server refuses the write.
 - **The workspace file carries no `seq`.** `importAll` sets `seq = max(seq, seqFloor(workspace))`, or a loaded file's ids could be reused.
 - **`npm run dev` alone saves to the browser only.** Run `npm run dev:api` beside it: Vite proxies `/api` to 127.0.0.1:5181. On a first run the app's probe for the file logs a 404 in the console; that is the missing file, not a fault.
 - **Fetch settles on headers, not on the body.** A response whose body is never read keeps the request open: it stalls `networkidle` and leaks a connection per write in a browser that stays open for a whole stream. `workspaceClient.ts` drains every body it does not parse, by reading it — cancelling aborts the request instead, which shows up as a failed request.
@@ -86,11 +86,11 @@
 - **`pip install` needs `PYTHONUTF8=1` on this machine.** One dependency's `setup.py` reads a file as cp1252 and dies otherwise.
 - **`npm run bundle` before building the wheel.** The web app is gitignored inside the package and is included only via hatch `artifacts`. A git install without it serves an error telling you so.
 - **The ledger holds four files per serial.** Only `<10 hex>.json` is a seal record; `ledger.entries()` matches that pattern, because `<serial>.receipt.json` sits beside it.
-- `python -m pytest` needs the repo venv (`.venv`, created with `--system-site-packages` to reuse the installed torch). Tests fake the watermark and the timestamp authority; `python/tests/fixtures/digicert-probe.tsr` is a real token over SHA-256("sponsorable api probe") for offline token tests.
+- `python -m pytest` needs the repo venv (`.venv`, created with `--system-site-packages` to reuse the installed torch). Tests fake the watermark and the timestamp authority; `python/tests/fixtures/digicert-probe.tsr` is a real token over SHA-256("sponsifable api probe") for offline token tests.
 
 ## Archive
 
-`docs/archive/` holds dated papers as Markdown, the source of truth; `scripts/archive/render.py` draws each into a page under `dist/archive/`. Titles name the idea, not the product, while the name is under review. A published paper takes errata, not edits. See `docs/archive/README.md`.
+`docs/archive/` holds dated papers as Markdown, the source of truth; `scripts/archive/render.py` draws each into a page under `dist/archive/`. Titles name the idea, not the product. A paper published under the old name keeps it: the colophon records what was true when it was written. A published paper takes errata, not edits. See `docs/archive/README.md`.
 
 ## Calibration
 

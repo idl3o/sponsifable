@@ -31,7 +31,7 @@ Each phase is its own commit, with the typecheck, the lint and both suites passi
 
 ## Decisions taken along the way
 
-- **The browser remembers the revision it last saw** (`sponsorable-sync-revision`). If the file has not moved since, the browser's copy is written up rather than replaced, so edits made while the server was down survive.
+- **The browser remembers the revision it last saw** (`sponsifable-sync-revision`). If the file has not moved since, the browser's copy is written up rather than replaced, so edits made while the server was down survive.
 - **No reconnecting mid-session.** An app that fell back to browser-only stays there until reloaded, because a server appearing later would replace the edits made meanwhile.
 - **`verify` records a sighting in the served workspace by default.** Before, it wrote nothing unless given `--workspace`.
 - **The overlay carries the shop board's accent,** so the two match.
@@ -49,7 +49,7 @@ Found along the way:
 
 ## What the pivot still owes
 
-- **The on-air log.** Built as `sponsorable log <deal>` (22fab30), against a fake OBS. Still owed: a run against real OBS, starting and stopping it from the app rather than a second terminal, and the signed delivery report. The `websockets` package won over a hand-rolled client, and the password is asked for per session rather than kept in a keyring.
+- **The on-air log.** Built as `sponsifable log <deal>` (22fab30), against a fake OBS. Still owed: a run against real OBS, starting and stopping it from the app rather than a second terminal, and the signed delivery report. The `websockets` package won over a hand-rolled client, and the password is asked for per session rather than kept in a keyring.
 - **A sponsor asset in the overlay.** Today it draws the label and the brand. An asset, its placement and its size need a model of their own.
 - **Overlay pricing**, which needs its own cited evidence before any benchmark.
 - **The deal panel as a custom dock.** The offer evaluator itself is built (d1aec61).

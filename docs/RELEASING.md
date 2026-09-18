@@ -1,6 +1,6 @@
 # Releasing to PyPI
 
-Sponsorable publishes with PyPI's Trusted Publishing. No API token exists: when the release workflow runs, GitHub proves to PyPI over OIDC that this workflow, in this repository, made the upload. PyPI then attaches a Sigstore-signed attestation to every file, recording which commit and workflow built it. For a tool whose purpose is provenance, that is the right way to ship.
+Sponsifable publishes with PyPI's Trusted Publishing. No API token exists: when the release workflow runs, GitHub proves to PyPI over OIDC that this workflow, in this repository, made the upload. PyPI then attaches a Sigstore-signed attestation to every file, recording which commit and workflow built it. For a tool whose purpose is provenance, that is the right way to ship.
 
 Everything is public and permanent once it reaches PyPI. A version number, once uploaded, can never be uploaded again, even after deletion. A bad release can be yanked, but not unpublished. That is why TestPyPI comes first.
 
@@ -10,9 +10,9 @@ Everything is public and permanent once it reaches PyPI. A version number, once 
 2. **Register a pending publisher on each.** This goes under *Account settings → Publishing → Add a new pending publisher*:
    | Field | PyPI | TestPyPI |
    |---|---|---|
-   | PyPI project name | `sponsorable` | `sponsorable` |
+   | PyPI project name | `sponsifable` | `sponsifable` |
    | Owner | `idl3o` | `idl3o` |
-   | Repository name | `sponsorable` | `sponsorable` |
+   | Repository name | `sponsifable` | `sponsifable` |
    | Workflow name | `release.yml` | `release.yml` |
    | Environment name | `pypi` | `testpypi` |
 
@@ -21,20 +21,20 @@ Everything is public and permanent once it reaches PyPI. A version number, once 
 
 ## Each release
 
-1. Set the same version in `python/sponsorable/__init__.py` and `package.json`. The workflow refuses a tag that does not match both.
+1. Set the same version in `python/sponsifable/__init__.py` and `package.json`. The workflow refuses a tag that does not match both.
 2. Push `main`. Then run *Actions → release → Run workflow*. This builds, runs every test, and publishes to **TestPyPI only**.
 3. Install from TestPyPI as a user would, taking dependencies from the real index:
    ```bash
-   pipx install --pip-args="--index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/" "sponsorable[seal]"
-   sponsorable --version
-   sponsorable            # the app should open
+   pipx install --pip-args="--index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/" "sponsifable[seal]"
+   sponsifable --version
+   sponsifable            # the app should open
    ```
 4. If that is right, tag and push:
    ```bash
    git tag v0.2.0
    git push origin v0.2.0
    ```
-5. Approve the `pypi` deployment in the Actions tab. The release is then live at <https://pypi.org/p/sponsorable>, and anyone can install it with `pipx install "sponsorable[seal]"`.
+5. Approve the `pypi` deployment in the Actions tab. The release is then live at <https://pypi.org/p/sponsifable>, and anyone can install it with `pipx install "sponsifable[seal]"`.
 
 ## What the workflow checks before anything is uploaded
 

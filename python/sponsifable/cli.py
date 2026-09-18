@@ -1,11 +1,11 @@
-"""The `sponsorable` command.
+"""The `sponsifable` command.
 
-    sponsorable                     serve the app on this machine
-    sponsorable seal DEAL FILE      establish rights on a won deal, before delivery
-    sponsorable verify FILE         check a downloaded ad against your seals
-    sponsorable log DEAL            record when a deal's overlay was on air, from OBS
-    sponsorable key --ssh PATH      choose the SSH key that signs your receipts
-    sponsorable setup               download the watermark model now
+    sponsifable                     serve the app on this machine
+    sponsifable seal DEAL FILE      establish rights on a won deal, before delivery
+    sponsifable verify FILE         check a downloaded ad against your seals
+    sponsifable log DEAL            record when a deal's overlay was on air, from OBS
+    sponsifable key --ssh PATH      choose the SSH key that signs your receipts
+    sponsifable setup               download the watermark model now
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ def _iso(value: str) -> date:
         raise argparse.ArgumentTypeError(f"{value!r} is not a YYYY-MM-DD date") from error
 
 
-_WORKSPACE_HELP = "the workspace file (default: the one the app saves to, under ~/.sponsorable)"
+_WORKSPACE_HELP = "the workspace file (default: the one the app saves to, under ~/.sponsifable)"
 
 
 def _workspace(args: argparse.Namespace, home: Path) -> Path:
@@ -47,8 +47,8 @@ def _pick_up_line(args: argparse.Namespace, path: Path, then: str) -> str:
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="sponsorable", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--version", action="version", version=f"sponsorable {__version__}")
+    parser = argparse.ArgumentParser(prog="sponsifable", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--version", action="version", version=f"sponsifable {__version__}")
     sub = parser.add_subparsers(dest="command")
 
     serve = sub.add_parser("serve", help="serve the app on 127.0.0.1 (the default)")
@@ -95,7 +95,7 @@ def _watermark_installed() -> bool:
     if importlib.util.find_spec("trustmark") is not None:
         return True
     print("Sealing and verifying need the watermark model, which is an optional extra because it brings "
-          "PyTorch with it. Install it with:\n  pipx install --force 'sponsorable[seal]'", file=sys.stderr)
+          "PyTorch with it. Install it with:\n  pipx install --force 'sponsifable[seal]'", file=sys.stderr)
     return False
 
 
@@ -108,7 +108,7 @@ def _seal(args: argparse.Namespace, home: Path) -> int:
         return 1
     path = _workspace(args, home)
     if not path.exists():
-        print(f"Not sealed: there is no workspace at {path}. Run `sponsorable serve` and open the app once, "
+        print(f"Not sealed: there is no workspace at {path}. Run `sponsifable serve` and open the app once, "
               "or name an exported file with --workspace.", file=sys.stderr)
         return 1
     try:
@@ -187,7 +187,7 @@ def _log_deal(args: argparse.Namespace, home: Path) -> dict | None:
     """The deal this log belongs to, or None with the reason printed."""
     path = _workspace(args, home)
     if not path.exists():
-        print(f"No workspace at {path}. Run `sponsorable serve` and open the app once.", file=sys.stderr)
+        print(f"No workspace at {path}. Run `sponsifable serve` and open the app once.", file=sys.stderr)
         return None
     deal = workspace.find_deal(workspace.load(path), args.deal)
     if deal is None:

@@ -7,7 +7,7 @@
  */
 
 /** The name shown to people. */
-export const PRODUCT = 'Sponsorable';
+export const PRODUCT = 'Sponsifable';
 
 /** The line under the name in the header. */
 export const TAGLINE = 'price it, prove it, pitch it';

@@ -1,8 +1,8 @@
-# Sponsorable
+# Sponsifable
 
 **Work out what to charge a sponsor, prove the audience, send the pitch, track the pipeline. Entirely on your own machine.**
 
-Most creators price sponsorship by guessing, or by repeating a number someone said on a podcast. Then a brand asks why, and the number falls apart. Sponsorable derives a price you can defend line by line, and hands you the sentence to say when you are asked to justify it.
+Most creators price sponsorship by guessing, or by repeating a number someone said on a podcast. Then a brand asks why, and the number falls apart. Sponsifable derives a price you can defend line by line, and hands you the sentence to say when you are asked to justify it.
 
 MIT licensed. No account, no remote server, no telemetry. Built for a creator who runs their own tools on a small budget: one install, and everything stays on your machine.
 
@@ -28,7 +28,7 @@ MIT licensed. No account, no remote server, no telemetry. Built for a creator wh
 
 **Keeps a deal log.** Every outcome, won or lost, is recorded against the price the card quoted, with the audience and terms frozen as they stood. It tells you whether you are being negotiated down, and whether the fit score predicts anything for you. If you choose to, one button opens the project's rate-data form with the deal filled in, rounded so it cannot identify you. Lost deals count too: they are the half of the market no rate survey ever sees.
 
-**Seals what you deliver, if you ask it to.** A sponsor who keeps your whitelisted ad running on day 90 has bought the ninety-day licence at the thirty-day price. `sponsorable seal` watermarks the file before delivery, signs a licence receipt, and has it timestamped. If the ad later turns up in a public ad library, `sponsorable verify` checks it, and the app prices the overrun as the further 30-day periods the sponsor took. It is opt-in per deal, and it cannot be applied after delivery: the evidence, not the app, enforces that. Receipts are signed with your own SSH key, so a sponsor can check one with `ssh-keygen`, which is already on their machine. [docs/provenance.md](https://github.com/idl3o/sponsorable/blob/main/docs/provenance.md) explains how, and what it cannot do.
+**Seals what you deliver, if you ask it to.** A sponsor who keeps your whitelisted ad running on day 90 has bought the ninety-day licence at the thirty-day price. `sponsifable seal` watermarks the file before delivery, signs a licence receipt, and has it timestamped. If the ad later turns up in a public ad library, `sponsifable verify` checks it, and the app prices the overrun as the further 30-day periods the sponsor took. It is opt-in per deal, and it cannot be applied after delivery: the evidence, not the app, enforces that. Receipts are signed with your own SSH key, so a sponsor can check one with `ssh-keygen`, which is already on their machine. [docs/provenance.md](https://github.com/idl3o/sponsorable/blob/main/docs/provenance.md) explains how, and what it cannot do.
 
 ---
 
@@ -78,13 +78,13 @@ See [CONTRIBUTING.md](https://github.com/idl3o/sponsorable/blob/main/CONTRIBUTIN
 
 **Track you.** No analytics, no error reporting, no account. Your unreleased rates and prospect list are commercially sensitive, and the simplest way to keep them private is never to transmit them. Your workspace is one JSON file on your own disk, and Export and Import copy it wherever you like. The single exception is sealing, which you choose deal by deal: it sends one salted hash to a public timestamp authority, and tells you before it does.
 
-**Treat a missing watermark as evidence.** Watermarks can be stripped, and the one Sponsorable uses ships with a removal model. A mark that decodes is evidence; a mark that does not proves nothing, and the tool never says otherwise.
+**Treat a missing watermark as evidence.** Watermarks can be stripped, and the one Sponsifable uses ships with a removal model. A mark that decodes is evidence; a mark that does not proves nothing, and the tool never says otherwise.
 
 ---
 
 ## Running it
 
-Sponsorable is not on PyPI yet. From a checkout, with Node 20.19+ or 22.12+ and Python 3.10+:
+Sponsifable is not on PyPI yet. From a checkout, with Node 20.19+ or 22.12+ and Python 3.10+:
 
 ```bash
 npm install
@@ -92,16 +92,16 @@ npm run bundle                 # build the app into the Python package
 pipx install .                 # the app and the CLI, without the watermark
 pipx install --force ".[seal]" # or with it: adds PyTorch, several hundred MB
 
-sponsorable                    # serves the app at http://127.0.0.1:5180
-sponsorable key --ssh ~/.ssh/id_ed25519   # sign receipts with your SSH key
-sponsorable setup              # fetch the watermark model once, ahead of time
-sponsorable seal dl-104 reel.png --source capture
-sponsorable verify ad.jpg --started 2026-10-01
+sponsifable                    # serves the app at http://127.0.0.1:5180
+sponsifable key --ssh ~/.ssh/id_ed25519   # sign receipts with your SSH key
+sponsifable setup              # fetch the watermark model once, ahead of time
+sponsifable seal dl-104 reel.png --source capture
+sponsifable verify ad.jpg --started 2026-10-01
 ```
 
 The server binds to 127.0.0.1 only, and answers only requests addressed to 127.0.0.1 or localhost, so a web page cannot reach it by rebinding a hostname. Serving from your own machine also means the optional Ollama integration talks to Ollama on the same machine, with no cross-origin configuration.
 
-The app saves your workspace to `~/.sponsorable/workspace.json` (or `$SPONSORABLE_HOME`) through that server. `seal` and `verify` write into the same file, so the app picks up a seal or a verified sighting when you return to it, with nothing to import. Every write checks that the file has not changed since it was read, so the app and the command line cannot overwrite each other. Pass `--workspace` to point any command at another file.
+The app saves your workspace to `~/.sponsifable/workspace.json` (or `$SPONSIFABLE_HOME`) through that server. `seal` and `verify` write into the same file, so the app picks up a seal or a verified sighting when you return to it, with nothing to import. Every write checks that the file has not changed since it was read, so the app and the command line cannot overwrite each other. Pass `--workspace` to point any command at another file.
 
 For development:
 
@@ -138,7 +138,7 @@ src/domain/      pure functions: no clock, no randomness, no I/O
   *.test.ts        property tests plus the calibration sweep
 src/store/       zustand and immer, kept in step with the workspace file; the browser holds a cache
 src/components/  one view per tab
-python/          the `sponsorable` CLI: serve, seal, verify
+python/          the `sponsifable` CLI: serve, seal, verify
   api.py           the workspace file over HTTP: compare-and-swap writes, localhost only
   receipt.py       pure: the receipt, its commitment, and the rules a claim must pass
 docs/            provenance design, the research behind the benchmarks, and an archive of papers

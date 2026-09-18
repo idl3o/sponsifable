@@ -1,36 +1,67 @@
 # The name
 
-The project is called Sponsorable while its name is under review. This note keeps what a rename has to touch, and what earlier attempts found, so the next attempt starts from the prior-art check rather than repeating it.
+The project was renamed from **Sponsorable** to **Sponsifable** on 18 September 2026, identifiers included. This note records what moved, what deliberately did not, and what earlier candidates were rejected for, so the next naming attempt starts from the prior-art check rather than repeating it.
 
-## Where the name lives
+## Why it was done all at once
 
-**Prose a person reads** goes through one constant on each side, and changes in one line:
+Every migration below was a no-op on the day. Nothing had been published to PyPI, no receipt had been signed under the SSHSIG namespace, no C2PA manifest had been embedded outside tests, and no `~/.sponsorable` directory existed on the author's machine. A rename later would have cost a compatibility path for each identifier; a rename then cost a search and replace. That window is now closed: from the first release, each line below becomes a migration with users on the other side of it.
 
-- `src/brand.ts`: `PRODUCT` and `TAGLINE`, for the app's header, the deal-log notes and the refusal of a newer file.
-- `python/sponsorable/brand.py`: `PRODUCT`, for the server's banner and the names on the local C2PA certificates.
+## What moved
 
-**Also prose, but outside the constants:** `index.html`'s `<title>`, the README, the docs, the CLI's help text, and this repository's name on GitHub. GitHub redirects a renamed repository, but links in published papers should be updated anyway.
+**Prose** goes through one constant on each side, so the next rename touches one line:
 
-**Identifiers** keep their spelling until the rename is decided, because files and other people's tools already depend on them. Each needs its own migration:
+- `src/brand.ts`: `PRODUCT`, `TAGLINE`.
+- `python/sponsifable/brand.py`: `PRODUCT`.
 
-| Identifier | Where | What changing it breaks |
-|---|---|---|
-| `sponsorable` on PyPI and as the command | `pyproject.toml` | Every install and every instruction that names the command. Publish the new name, and leave the old one as a stub that depends on it. |
-| `sponsorable-receipt`, the SSHSIG namespace | `python/sponsorable/sshsig.py` | Verification of every receipt already issued: a sponsor's `ssh-keygen -Y verify -n` must name the namespace it was signed under. Verify under both. |
-| `org.sponsorable.licence`, the C2PA assertion label | `python/sponsorable/manifest.py` | Reading the licence from manifests already embedded. Read both labels. |
-| `sponsorable` as the C2PA claim generator | `python/sponsorable/manifest.py` | Nothing technical. It is what inspectors display. |
-| `SPONSORABLE_HOME` and `~/.sponsorable` | `python/sponsorable/ledger.py` | The ledger, the keys and the workspace file. Read the old directory when the new one is absent. |
-| `sponsorable-v1`, the localStorage key | `src/store/useStore.ts` | The browser cache. The workspace file is the source of truth, so a new key costs only the cache. |
-| `sponsorable.json`, the export's file name | `src/App.tsx` | Nothing; the CLI takes any path. |
+**Identifiers**, all changed together:
 
-## Names already taken
+| Identifier | Was | Now | Where |
+|---|---|---|---|
+| PyPI distribution and the command | `sponsorable` | `sponsifable` | `pyproject.toml` |
+| Python package directory | `python/sponsorable/` | `python/sponsifable/` | the whole tree |
+| SSHSIG namespace | `sponsorable-receipt` | `sponsifable-receipt` | `sshsig.py` |
+| C2PA assertion label | `org.sponsorable.licence` | `org.sponsifable.licence` | `manifest.py` |
+| C2PA claim generator | `sponsorable` | `sponsifable` | `manifest.py` |
+| Home directory and its override | `~/.sponsorable`, `SPONSORABLE_HOME` | `~/.sponsifable`, `SPONSIFABLE_HOME` | `ledger.py` |
+| Browser save key | `sponsorable-v1` | `sponsifable-v1` | `useStore.ts` |
+| Sync revision key | `sponsorable-sync-revision` | `sponsifable-sync-revision` | `sync.ts` |
+| Export file name | `sponsorable.json` | `sponsifable.json` | `App.tsx` |
+| npm package name | `sponsorable` | `sponsifable` | `package.json` |
 
-**Sponsoar**, checked 2026-09-12:
+## What deliberately did not move
 
-- [SPONSOAR LTD](https://find-and-update.company-information.service.gov.uk/company/14908657), Companies House 14908657, is an active private company incorporated on 1 June 2023 and registered in Bristol. It trades at [sponsoar.co.uk](https://sponsoar.co.uk/) as a sports sponsorship platform that matches businesses with teams and athletes. An active UK trader in sponsorship services, under the same name, is a passing-off exposure whether or not the mark is registered.
-- A sponsorship management platform traded as Sponsoar at sponsoar.app. The domain no longer resolves.
-- Princeton University's DataSpace holds a thesis titled *SponSoar: The Data-Driven Influencer Marketing Tool*.
-- The GitHub organisation `Sponsoar` exists, created in 2022, with no public repositories.
-- The name was free on PyPI, TestPyPI and npm.
+- **The GitHub repository** is still `idl3o/sponsorable`, and every URL in the docs still points there. Renaming it is the author's to do; GitHub redirects both ways afterwards, so the links keep working either way. Update them when the repository moves, not before.
+- **`docs/archive/2026-09-the-defensible-number.md`.** A published paper takes errata, not edits. Its only mention of the old name is the repository URL in its colophon, which is accurate as written.
+- **The timestamp fixture's digest.** `python/tests/test_timestamp.py` hashes the literal bytes `sponsorable api probe`, because those are the bytes DigiCert signed in September 2026. A rename cannot change what a timestamp covers, and a test that pretended otherwise would be testing nothing.
+- **A save written under the old browser key.** `adoptRenamedSave()` in `useStore.ts` copies a `sponsorable-v1` save to the new key once, and leaves the original where it is. A creator who had only ever run `npm run dev` kept their work in the browser and nowhere else; renaming the key without this would have stranded it. Remove it once no such browser can plausibly remain.
 
-The UK trademark register was not searched. Any candidate should be checked there, at Companies House, on PyPI, npm and GitHub, and by a web search for the same market, before it is adopted.
+## Still to do
+
+- **Rename the repository** on GitHub, then update the URLs in the docs and `package.json`.
+- **Reserve `sponsifable`** on PyPI and TestPyPI before the first release, and set up trusted publishing for it (see `docs/RELEASING.md`).
+- **Search the UK trademark register.** This has not been done for any candidate, and it is the check that matters legally.
+
+## Names checked and rejected
+
+**Sponsify**, checked 18 September 2026. Rejected: comprehensively taken in this exact market.
+
+- An npm package exists under the name, and the GitHub account `sponsify` is taken.
+- At least six live businesses trade as Sponsify in sponsorship or creator marketing: sponsify.io (sponsorship ROI), sponsify.ge (creator collaboration), sponsify.co (YouTube native advertising), sponsifyagency.com, sponsifyapp.com, and SponsifyMe, with LinkedIn and Crunchbase entries besides.
+
+**Sponsoar**, checked 12 September 2026. Rejected: an active UK company in sponsorship services.
+
+- [SPONSOAR LTD](https://find-and-update.company-information.service.gov.uk/company/14908657), Companies House 14908657, incorporated 1 June 2023, registered in Bristol, trading at sponsoar.co.uk as a sports sponsorship marketplace. An active UK trader under the same name in the same services is a passing-off exposure whether or not the mark is registered.
+- A second sponsorship-management platform traded at sponsoar.app; the domain no longer resolves.
+- Princeton's DataSpace holds a thesis titled *SponSoar: The Data-Driven Influencer Marketing Tool*.
+- The GitHub organisation `Sponsoar` has existed since 2022.
+- The name was free on PyPI, TestPyPI and npm, which was not enough.
+
+## What Sponsifable was checked against
+
+On 18 September 2026: free on PyPI, TestPyPI and npm; the GitHub account was free; Companies House returned no results; a web search found no company, product or trademark, only the archaic dictionary word *sponsible*; and sponsifable.com, .io, .co.uk and .app did not resolve.
+
+**The known risk.** [Sponsara.ai](https://sponsara.ai/) sells "AI sponsorship intelligence" for YouTube influencers — the same services class, one letter and a stress pattern away. An examiner or an opponent would look at that pair. A professional search is worth commissioning before any application.
+
+## How to check the next one
+
+Companies House, the UK IPO register, PyPI, TestPyPI, npm, GitHub accounts and organisations, the obvious domains, and a plain web search for the same market. Record the result here whether it passes or fails.

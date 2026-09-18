@@ -89,13 +89,37 @@ function migrate(persisted: unknown, version: number): Persisted {
     return { profile, terms, prospects, deals, board, seq: typeof seq === 'number' ? seq : 100 };
   }
   try {
-    localStorage.setItem(`sponsorable-unreadable-v${version}`, JSON.stringify(persisted));
+    localStorage.setItem(`sponsifable-unreadable-v${version}`, JSON.stringify(persisted));
   } catch {
     // Storage full or blocked. Nothing more can be done from here.
   }
   const { profile, terms, prospects, deals, board } = initialState;
   return { profile, terms, prospects, deals, board, seq: initialState.seq };
 }
+
+/** Where this browser keeps its copy. */
+export const SAVE_KEY = 'sponsifable-v1';
+/** What that key was called before the product was renamed, in September 2026. */
+const RENAMED_FROM = 'sponsorable-v1';
+
+/**
+ * Carry a save written before the rename across to the new key, once.
+ *
+ * The workspace file is the source of truth, but a creator who has only ever
+ * run `npm run dev` has their work in this browser and nowhere else. Renaming
+ * the key without this would strand it. The old key is left where it is.
+ */
+export function adoptRenamedSave(): void {
+  try {
+    const existing = localStorage.getItem(SAVE_KEY);
+    const older = localStorage.getItem(RENAMED_FROM);
+    if (existing === null && older !== null) localStorage.setItem(SAVE_KEY, older);
+  } catch {
+    // Storage blocked. The app starts from the sample, as it would have anyway.
+  }
+}
+
+adoptRenamedSave();
 
 type SetState = StoreApi<State & Actions>['setState'];
 /** Apply an immer recipe to the state. */
@@ -272,7 +296,7 @@ function workspaceActions(set: SetState): Pick<Actions, 'setTab' | 'importAll' |
 /**
  * Application state.
  *
- * The workspace file that `sponsorable serve` owns is the source of truth, and
+ * The workspace file that `sponsifable serve` owns is the source of truth, and
  * `sync.ts` keeps this store and the file in step. This browser's copy is a
  * cache, and the whole save when the app runs without the server.
  *
@@ -295,9 +319,10 @@ export const useStore = create<State & Actions>()(
       };
     },
     {
-      // The key keeps its first name so existing saves are found; the format
-      // is tracked by `version`, and `migrate` upgrades anything older.
-      name: 'sponsorable-v1',
+      // The format is tracked by `version`, and `migrate` upgrades anything
+      // older. The key was renamed with the product; `adoptRenamedSave` carries
+      // a save written under the old name across, once.
+      name: SAVE_KEY,
       version: WORKSPACE_VERSION,
       migrate: (persisted, version) => migrate(persisted, version) as State & Actions,
       partialize: (s): Persisted => ({

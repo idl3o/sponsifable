@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from sponsorable import workspace
+from sponsifable import workspace
 
 
 def ws(**extra):
