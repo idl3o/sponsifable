@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FORMAT_LABEL, PLATFORM_LABEL } from '../domain/benchmarks';
 import { priceOverrun, rateSubmissionUrl } from '../domain/deals';
+import { onAirSentence, reportSentence } from '../domain/onair';
 import { overlayUrl } from '../domain/overlay';
 import type { Deal, Sighting } from '../domain/types';
 import { useSyncStatus } from '../store/sync';
 import { useStore } from '../store/useStore';
+import { fetchOnAir, type OnAir } from '../store/workspaceClient';
 import { Button, Pill, TextField, copyText, money } from './ui/Primitives';
 
 const LOST_LABEL: Record<NonNullable<Deal['lostReason']>, string> = {
@@ -155,11 +157,46 @@ function RateSubmission({ url }: { url: string }) {
   );
 }
 
-/** The OBS browser source that puts the ad label on stream. */
+/** Read the on-air log for a deal once, when its row is opened. Only the server can answer. */
+function useOnAir(dealId: string, served: boolean): OnAir | null {
+  const [state, setState] = useState<OnAir | null>(null);
+  useEffect(() => {
+    if (!served) return;
+    let cancelled = false;
+    void fetchOnAir(window.fetch.bind(window), dealId).then((result) => {
+      if (!cancelled) setState(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [dealId, served]);
+  return served ? state : null;
+}
+
+/** What the log says was on air, and whether a signed report exists yet. */
+function OnAirLine({ deal, onAir }: { deal: Deal; onAir: OnAir | null }) {
+  if (!onAir || onAir.kind === 'offline') return null;
+  if (onAir.kind === 'missing') {
+    return (
+      <p className="note">
+        No on-air log yet. Run <code>sponsifable log {deal.id}</code> while you stream, with OBS's WebSocket
+        server switched on.
+      </p>
+    );
+  }
+  return (
+    <p className="note">
+      {onAirSentence(onAir.summary)} {reportSentence(onAir.summary, deal.id)}
+    </p>
+  );
+}
+
+/** The OBS browser source that puts the ad label on stream, and what the log says about it. */
 function OnStream({ deal }: { deal: Deal }) {
   const served = useSyncStatus((s) => s.mode === 'file');
   const [copied, setCopied] = useState(false);
   const url = overlayUrl(window.location.origin, deal.id);
+  const onAir = useOnAir(deal.id, served);
   return (
     <>
       <h3>On stream</h3>
@@ -167,7 +204,7 @@ function OnStream({ deal }: { deal: Deal }) {
         Add this address to OBS as a browser source. It shows the ad label and the sponsor's name,
         reads this workspace, and needs no OBS permissions.
       </p>
-      <div className="row" style={{ marginBottom: 14 }}>
+      <div className="row" style={{ marginBottom: 8 }}>
         <Button
           disabled={!served}
           title={served ? url : 'Needs `sponsifable serve`: OBS keeps its own browser storage, so the overlay reads the workspace file.'}
@@ -176,6 +213,7 @@ function OnStream({ deal }: { deal: Deal }) {
           {copied ? 'Copied' : 'Copy OBS URL'}
         </Button>
       </div>
+      <OnAirLine deal={deal} onAir={onAir} />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { syncStatus } from './store/sync';
 import { adoptRenamedSave, useStore } from './store/useStore';
 
 /**
@@ -175,6 +176,31 @@ describe('App', () => {
     expect(useStore.getState().profile.name).toBe('Saved Before The Rename');
     // The old save is left where it is, rather than moved.
     expect(localStorage.getItem('sponsorable-v1')).toContain('Saved Before The Rename');
+  });
+
+  it('shows what the on-air log says for a won deal when the server is serving', async () => {
+    const summary = {
+      deal: '', source: 'Sponsor overlay', streamStartedAt: null, startObserved: true,
+      intervals: [{ start: 'a', end: 'b', seconds: 1800, streamOffsetSeconds: 300 }],
+      totalSeconds: 1800, disagreements: 1, openSince: null, reports: ['dl-x-20260918T220000Z'],
+    };
+    vi.stubGlobal('fetch', vi.fn(async (url: string) =>
+      String(url).startsWith('/api/onair/')
+        ? new Response(JSON.stringify(summary), { status: 200, headers: { 'Content-Type': 'application/json' } })
+        : Promise.reject(new Error('offline')),
+    ));
+    syncStatus.setState({ mode: 'file' });
+    try {
+      render(<App />);
+      fireEvent.click(screen.getByRole('tab', { name: 'Deals' }));
+      fireEvent.change(screen.getByLabelText(/Agreed, GBP/i), { target: { value: '2400' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Record' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Delivery, rights and sightings' }));
+      expect(await screen.findByText(/On air 30m across 1 interval; 1 direct check contradicted an OBS event\./)).toBeTruthy();
+      expect(screen.getByText(/Signed report: dl-x-20260918T220000Z/)).toBeTruthy();
+    } finally {
+      syncStatus.setState({ mode: 'browser-only' });
+    }
   });
 
   it('judges an offer against the card and says what to reply', () => {

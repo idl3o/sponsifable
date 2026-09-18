@@ -21,13 +21,14 @@ Two guards, because a page on any website can send requests to 127.0.0.1:
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
-from . import __version__, workspace
+from . import __version__, onair, report, workspace
 from .brand import PRODUCT
 
 #: The largest workspace accepted. The board's image is capped near 400 KB.
@@ -53,6 +54,11 @@ class Context:
     port: int
     allowed_origins: frozenset[str] = frozenset()
     lock: threading.Lock = field(default_factory=threading.Lock, compare=False)
+    #: Where the on-air logs and the signed reports live. The workspace's folder unless told otherwise.
+    home: Path | None = None
+
+    def home_dir(self) -> Path:
+        return self.home or self.workspace.parent
 
     def own_origins(self) -> frozenset[str]:
         """Origins a write may come from: this server's two names, and any allowed for development."""
@@ -95,9 +101,28 @@ def handle(method: str, path: str, headers: Mapping[str, str], body: bytes, ctx:
         return _read(h, ctx)
     if route == "/api/workspace" and method == "PUT":
         return _write(h, body, ctx)
+    if route.startswith("/api/onair/") and method == "GET":
+        return _onair(route[len("/api/onair/"):], ctx)
     if route in ("/api/info", "/api/workspace"):
         return _json(405, {"error": f"{method} is not allowed here"})
     return _json(404, {"error": "no such endpoint"})
+
+
+#: A deal id as the app generates them. Anything else could be a path.
+_DEAL_ID = re.compile(r"^[A-Za-z0-9-]{1,64}$")
+
+
+def _onair(deal_id: str, ctx: Context) -> Response:
+    """What the on-air log says for a deal, and which signed reports exist. Read-only."""
+    if not _DEAL_ID.match(deal_id):
+        return _json(400, {"error": "not a deal id"})
+    home = ctx.home_dir()
+    lines = onair.read_log(onair.log_path(home, deal_id))
+    if not lines:
+        return _json(404, {"missing": True})
+    folder = report.reports_dir(home)
+    names = sorted(p.name[: -len(".report.json")] for p in folder.glob(f"{deal_id}-*.report.json")) if folder.exists() else []
+    return _json(200, {**onair.delivery(lines).to_json(), "reports": names})
 
 
 def _read(h: Mapping[str, str], ctx: Context) -> Response:

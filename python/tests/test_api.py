@@ -166,6 +166,38 @@ def test_other_methods_are_not_allowed(ctx):
     assert api.handle("GET", "/api/nothing", base, b"", ctx).status == 404
 
 
+# The on-air log, read-only
+
+
+def test_the_on_air_view_says_when_there_is_no_log(ctx):
+    response = get(ctx, "/api/onair/dl-104")
+    assert response.status == 404 and json.loads(response.body) == {"missing": True}
+
+
+def test_the_on_air_view_folds_the_log_and_lists_the_reports(tmp_path: Path):
+    from sponsifable import onair, report
+    ctx = api.Context(tmp_path / "workspace.json", PORT, home=tmp_path)
+    log = onair.log_path(tmp_path, "dl-104")
+    onair.append(log, {"kind": "stream", "at": "2026-09-18T20:00:00.000+00:00", "live": True, "startObserved": True})
+    onair.append(log, {"kind": "onair", "at": "2026-09-18T20:05:00.000+00:00", "state": "start"})
+    onair.append(log, {"kind": "onair", "at": "2026-09-18T20:06:30.000+00:00", "state": "end"})
+    folder = report.reports_dir(tmp_path)
+    folder.mkdir()
+    (folder / "dl-104-20260918T220000Z.report.json").write_text("{}", encoding="utf-8")
+    (folder / "dl-999-20260918T220000Z.report.json").write_text("{}", encoding="utf-8")
+    body = json.loads(get(ctx, "/api/onair/dl-104").body)
+    assert body["totalSeconds"] == 90
+    assert body["intervals"][0]["streamOffsetSeconds"] == 300
+    assert body["reports"] == ["dl-104-20260918T220000Z"]
+
+
+@pytest.mark.parametrize("bad", ["../workspace", "dl-1/../x", "dl%2F1", "a" * 65, ""])
+def test_the_on_air_view_refuses_anything_that_is_not_a_deal_id(ctx, bad):
+    response = get(ctx, f"/api/onair/{bad}")
+    assert response.status in (400, 404)
+    assert not ctx.workspace.exists()
+
+
 # Over a real socket
 
 

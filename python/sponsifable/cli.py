@@ -329,6 +329,7 @@ def main(argv: list[str] | None = None) -> None:
             open_browser=not getattr(args, "no_browser", False),
             api_only=getattr(args, "api_only", False),
             allowed_origins=frozenset(getattr(args, "allow_origin", [])),
+            home=home,
         )
     elif args.command == "seal":
         sys.exit(_seal(args, home))

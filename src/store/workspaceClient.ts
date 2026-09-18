@@ -1,3 +1,4 @@
+import type { OnAirSummary } from '../domain/onair';
 import { parseWorkspace, type Workspace } from '../domain/workspace';
 
 /**
@@ -118,6 +119,29 @@ export async function putRemote(
     return { kind: 'offline' };
   }
   return { kind: 'refused', reason: await errorOf(response) };
+}
+
+/** What the on-air log says for a deal, as the server folds it. */
+export type OnAir = { kind: 'ok'; summary: OnAirSummary } | { kind: 'missing' } | { kind: 'offline' };
+
+/** Read the on-air summary for a deal. `missing` means no log has been written for it yet. */
+export async function fetchOnAir(fetcher: Fetch, dealId: string): Promise<OnAir> {
+  let response: Response;
+  try {
+    response = await fetcher(`/api/onair/${encodeURIComponent(dealId)}`, { cache: 'no-store' });
+  } catch {
+    return { kind: 'offline' };
+  }
+  if (response.status === 404) {
+    await drain(response);
+    return { kind: 'missing' };
+  }
+  if (!response.ok) {
+    await drain(response);
+    return { kind: 'offline' };
+  }
+  const summary = (await response.json().catch(() => null)) as OnAirSummary | null;
+  return summary && Array.isArray(summary.intervals) ? { kind: 'ok', summary } : { kind: 'offline' };
 }
 
 /** Where the server keeps the file, for the status line. Empty when it cannot say. */

@@ -94,23 +94,23 @@ class _Handler(http.server.SimpleHTTPRequestHandler):
 
 
 def make_server(workspace: Path, port: int = 5180, api_only: bool = False,
-                allowed_origins: frozenset[str] = frozenset(), web: Path = WEB) -> _Server:
+                allowed_origins: frozenset[str] = frozenset(), web: Path = WEB, home: Path | None = None) -> _Server:
     """Bind 127.0.0.1. Port 0 picks a free port, which the context then records."""
     server = _Server(("127.0.0.1", port), _Handler)
     server.web, server.api_only = web, api_only
-    server.ctx = api.Context(workspace, server.server_address[1], allowed_origins)
+    server.ctx = api.Context(workspace, server.server_address[1], allowed_origins, home=home)
     return server
 
 
 def serve(workspace: Path, port: int = 5180, open_browser: bool = True, api_only: bool = False,
-          allowed_origins: frozenset[str] = frozenset()) -> None:
+          allowed_origins: frozenset[str] = frozenset(), home: Path | None = None) -> None:
     """Serve until interrupted."""
     if not api_only and not (WEB / "index.html").exists():
         raise SystemExit(
             "The web app is not bundled in this install. From a checkout, run `npm run bundle` first, "
             "or use `npm run dev` with `npm run dev:api` for development."
         )
-    with make_server(workspace, port, api_only, allowed_origins) as server:
+    with make_server(workspace, port, api_only, allowed_origins, home=home) as server:
         url = f"http://127.0.0.1:{server.ctx.port}/"
         what = f"{PRODUCT}'s workspace API" if api_only else PRODUCT
         print(f"{what} is running at {url}  (Ctrl+C to stop)")

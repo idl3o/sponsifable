@@ -22,9 +22,10 @@ const note = (severity, where, message) => problems.push({ severity, where, mess
 /** Attach console and error listeners that record rather than print. */
 function watch(page, label) {
   page.on('console', (msg) => {
-    // On a first run the app asks for a workspace file that does not exist yet,
-    // and the browser logs that 404. It is the missing file, not a fault.
-    const expected404 = /404/.test(msg.text()) && /api\/workspace/.test(msg.location()?.url ?? '');
+    // The app asks for a workspace file, and for a deal's on-air log, before
+    // either exists, and the browser logs those 404s. They mean "not yet",
+    // not a fault.
+    const expected404 = /404/.test(msg.text()) && /api\/(workspace|onair)/.test(msg.location()?.url ?? '');
     if (msg.type() === 'error' && !expected404) note('error', label, `console: ${msg.text().slice(0, 200)}`);
     if (msg.type() === 'warning' && /React|key|validate/i.test(msg.text())) {
       note('warning', label, `console: ${msg.text().slice(0, 200)}`);
