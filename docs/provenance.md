@@ -75,6 +75,12 @@ The receipt tells the sponsor that the file carries a watermark and what terms i
 
 It does not price the overrun. Every market assumption lives in `src/domain/benchmarks.ts`, so the extension invoice is composed in the web app from the verified facts. Paid usage is sold by the 30-day period, so the overrun is the further periods the sponsor took, each at the per-period rate the licence was priced on, scaled by the discount already negotiated and never below the per-period minimum.
 
+## The delivery report
+
+A stream sponsor's question is not "which file?" but "was it up, and when?". The on-air log answers it, but the log is the creator's own file on the creator's own machine. `sponsifable report` folds the log into intervals, binds the log file's SHA-256 into the document, and signs it with the same SSH key that signs receipts — under a different SSHSIG namespace, `sponsifable-delivery`, so a signature over a report can never be presented as a signature over a licence, or the reverse.
+
+The report is an index into the recording, not proof on its own, and its notice says so. Each interval is a UTC span and, where the logger saw the stream start, an offset into the stream, so the sponsor opens the VOD at that minute and sees the placement. The notice names how long the platform keeps the recording, so the sponsor checks in time. It hides nothing the log could not settle: every direct check of OBS that contradicted an event is counted, and an interval the logger stopped inside is named with its time. It carries no price. The sponsor verifies it with `ssh-keygen -Y verify`, exactly as they verify a receipt.
+
 ## Survival
 
 The design is theory until the watermark survives the real path. `scripts/survival.py` runs the local proxy. On 24 frames drawn evenly from 23,000 SDXL outputs, on 10 September 2026, bit-exact recovery of the serial was:

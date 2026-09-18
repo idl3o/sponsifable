@@ -1,6 +1,6 @@
 # Sponsifable
 
-**Work out what to charge a sponsor, prove the audience, send the pitch, track the pipeline. Entirely on your own machine.**
+**Work out what to charge a sponsor, judge the offer that comes back, prove the audience, send the pitch, track the pipeline, and show a stream sponsor exactly when their placement was on air. Entirely on your own machine.**
 
 Most creators price sponsorship by guessing, or by repeating a number someone said on a podcast. Then a brand asks why, and the number falls apart. Sponsifable derives a price you can defend line by line, and hands you the sentence to say when you are asked to justify it.
 
@@ -20,6 +20,8 @@ MIT licensed. No account, no remote server, no telemetry. Built for a creator wh
 
 **Names the one discount worth giving.** A creator with no results on record can offer an introductory rate: a named, one-off concession, in exchange for permission to publish the campaign's results. The pitch says so. It lapses the moment your first result is recorded, because by then you have what it was buying.
 
+**Judges an offer that has already arrived.** A sponsor names a number for a placement, on their terms. The offer tab prices the same placement on those terms, says what each thing they asked for is worth — the paid usage, the exclusivity, the deadline — and writes the reply. When the fee cannot move it lists what to give back instead, smallest give first, and says plainly when nothing it can give reaches their number. It is the rate card read backwards, so the two can never disagree.
+
 **Builds a media kit that survives scrutiny.** It leads with impressions per placement rather than summed follower counts, because summing followers across five platforms counts the same person five times and every experienced sponsor knows it. It also lists the problems a sponsor will notice, so you name them first.
 
 **Ranks prospects.** A 0 to 100 fit score over category adjacency, market overlap, budget against your walk-away price, and whether the brand has ever paid a creator at all. Every component reports its reasoning, so a low score can be argued with. Triage, not prophecy.
@@ -29,6 +31,8 @@ MIT licensed. No account, no remote server, no telemetry. Built for a creator wh
 **Keeps a deal log.** Every outcome, won or lost, is recorded against the price the card quoted, with the audience and terms frozen as they stood. It tells you whether you are being negotiated down, and whether the fit score predicts anything for you. If you choose to, one button opens the project's rate-data form with the deal filled in, rounded so it cannot identify you. Lost deals count too: they are the half of the market no rate survey ever sees.
 
 **Seals what you deliver, if you ask it to.** A sponsor who keeps your whitelisted ad running on day 90 has bought the ninety-day licence at the thirty-day price. `sponsifable seal` watermarks the file before delivery, signs a licence receipt, and has it timestamped. If the ad later turns up in a public ad library, `sponsifable verify` checks it, and the app prices the overrun as the further 30-day periods the sponsor took. It is opt-in per deal, and it cannot be applied after delivery: the evidence, not the app, enforces that. Receipts are signed with your own SSH key, so a sponsor can check one with `ssh-keygen`, which is already on their machine. [docs/provenance.md](https://github.com/idl3o/sponsifable/blob/main/docs/provenance.md) explains how, and what it cannot do.
+
+**Puts a sponsor on stream, and shows they were there.** This half is early. Each won deal has an overlay address to add to OBS as a browser source: it draws "Ad" and the sponsor's name, asks OBS for no permissions, and never draws a price. While you stream, `sponsifable log` listens to OBS's own WebSocket and writes down, in wall-clock UTC, every second the placement was in the broadcast feed, checking OBS directly rather than trusting its events. Afterwards `sponsifable report` folds that log into intervals with offsets into the recording, signs it with your SSH key, and gives you the three files the sponsor keeps: the recording is the evidence, the report says where to look. The logger has been tested against a fake OBS and one real session that covered scene switches only; the harder cases, studio mode and nested scenes, are still to be run. It does not start from the app yet, and the overlay carries no sponsor artwork yet.
 
 ---
 
@@ -78,6 +82,8 @@ See [CONTRIBUTING.md](https://github.com/idl3o/sponsifable/blob/main/CONTRIBUTIN
 
 **Track you.** No analytics, no error reporting, no account. Your unreleased rates and prospect list are commercially sensitive, and the simplest way to keep them private is never to transmit them. Your workspace is one JSON file on your own disk, and Export and Import copy it wherever you like. The single exception is sealing, which you choose deal by deal: it sends one salted hash to a public timestamp authority, and tells you before it does.
 
+**Price time on screen.** No transaction data exists for a persistent logo on a stream, and the one eye-tracking study puts such a banner at under 1.5% of viewer attention, below the chat box. The engine prices the stream segment it has evidence for and treats the overlay as part of it. [docs/research/overlay-pricing-2026-09.md](https://github.com/idl3o/sponsifable/blob/main/docs/research/overlay-pricing-2026-09.md) has the evidence, and what would change the decision.
+
 **Treat a missing watermark as evidence.** Watermarks can be stripped, and the one Sponsifable uses ships with a removal model. A mark that decodes is evidence; a mark that does not proves nothing, and the tool never says otherwise.
 
 ---
@@ -97,6 +103,9 @@ sponsifable key --ssh ~/.ssh/id_ed25519   # sign receipts with your SSH key
 sponsifable setup              # fetch the watermark model once, ahead of time
 sponsifable seal dl-104 reel.png --source capture
 sponsifable verify ad.jpg --started 2026-10-01
+
+sponsifable log dl-104 --source "Sponsor overlay"    # during the stream, with OBS's WebSocket server on
+sponsifable report dl-104 --vod https://...          # afterwards: the signed delivery report
 ```
 
 The server binds to 127.0.0.1 only, and answers only requests addressed to 127.0.0.1 or localhost, so a web page cannot reach it by rebinding a hostname. Serving from your own machine also means the optional Ollama integration talks to Ollama on the same machine, with no cross-origin configuration.
@@ -108,10 +117,10 @@ For development:
 ```bash
 npm run dev        # http://localhost:5180, saving in the browser only
 npm run dev:api    # beside it: the workspace server, so the app saves to the file
-npm test           # 167 tests, including the calibration sweep
+npm test           # 197 tests, including the calibration sweep
 npm run typecheck
 npm run lint       # includes the house rules: no function over 50 lines
-python -m pytest   # 87 tests: the workspace server, receipts, SSH signatures, timestamps, seal and verify
+python -m pytest   # 122 tests: the workspace server, receipts, SSH signatures, timestamps, seal and verify, the on-air log and the report
 
 node scripts/playtest.mjs   # drives real Chrome, screenshots every tab,
                             # checks overflow, tap targets and broken numbers
@@ -133,14 +142,20 @@ src/domain/      pure functions: no clock, no randomness, no I/O
   scoring.ts       prospect fit
   pitch.ts         email composition and follow-up cadence
   deals.ts         deal log, personal calibration, rate submission, overrun pricing
+  offer.ts         an incoming offer judged against the same engine, with the reply
+  overlay.ts       what the OBS overlay may draw: the disclosure and the brand, never a price
   workspace.ts     versioned file format; validates every import and old save
   localModel.ts    optional Ollama sharpening, fails quietly
   *.test.ts        property tests plus the calibration sweep
 src/store/       zustand and immer, kept in step with the workspace file; the browser holds a cache
 src/components/  one view per tab
-python/          the `sponsifable` CLI: serve, seal, verify
+src/overlay/     the OBS browser source: a second page, transparent, fails silently
+python/          the `sponsifable` CLI: serve, seal, verify, log, report
   api.py           the workspace file over HTTP: compare-and-swap writes, localhost only
   receipt.py       pure: the receipt, its commitment, and the rules a claim must pass
+  obs.py           the obs-websocket protocol layer and the on-air state machine
+  onair.py         the append-only on-air log, and the fold that reads it
+  report.py        the signed delivery report, under its own SSHSIG namespace
 docs/            provenance design, the research behind the benchmarks, and an archive of papers
 scripts/         browser play test, watermark survival test, archive renderer
 ```

@@ -16,6 +16,8 @@ Design sources for the creator's visible mark on clip previews: the board that a
 - **The vertical positions anchor to the app's UI.** "Upper" sits just under the top bar, and "middle" sits just above the button column. There the board's width cannot run into the buttons. The first draft's middle position, at y 400, collided once the QR code grew to a scannable size.
 - **The QR code is sized to scan.** It is 92 units on the landscape frame and 68 on the vertical one, which gives at least 3 px a module on the exported 720p previews with the quiet zone included. The editor warns when a longer link makes the code too dense.
 
+- **The editor's controls grew to tap size, in the code only.** On 18 September 2026 the accent swatches went from 26 px to 28 px, the custom-colour input to 32 by 30, and the QR checkbox row gained a 28 px minimum, because the play test found them too small to hit at phone width. The canvas's editor artboard still shows the smaller controls. When the canvas is next opened, move it to match the code.
+
 ## Checks the editor runs
 
 - The PREVIEW label is present in every mode.
