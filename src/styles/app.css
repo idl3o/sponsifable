@@ -260,6 +260,8 @@ input[type='range'] {
   border: none;
   background: none;
   accent-color: var(--accent);
+  /* Tall enough to hit with a thumb, which the play test checks at phone width. */
+  min-height: 28px;
 }
 
 .hint {
@@ -670,6 +672,8 @@ label.check {
   font-size: 13.5px;
   margin-bottom: 11px;
   cursor: pointer;
+  /* The whole row toggles the box, so it is the tap target, and has to be big enough. */
+  min-height: 28px;
 }
 
 label.check input {
@@ -678,8 +682,8 @@ label.check input {
 }
 
 .swatch {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 7px;
   border: none;
   cursor: pointer;
@@ -690,8 +694,8 @@ label.check input {
 }
 
 input.swatch-custom {
-  width: 30px;
-  height: 28px;
+  width: 32px;
+  height: 30px;
   padding: 2px;
 }
 
