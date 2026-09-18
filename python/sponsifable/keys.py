@@ -42,12 +42,16 @@ class NoKey(Exception):
 
 
 class Signer(Protocol):
-    """Signs receipts. Production uses ssh-keygen; tests use an in-memory key."""
+    """
+    Signs receipts and delivery reports. Production uses ssh-keygen; tests use
+    an in-memory key. Each kind of document has its own SSHSIG namespace, so a
+    signature over one can never be passed off as a signature over the other.
+    """
 
     @property
     def public_key(self) -> str: ...
 
-    def sign(self, message: bytes) -> str: ...
+    def sign(self, message: bytes, namespace: str = sshsig.NAMESPACE) -> str: ...
 
 
 def _public_key_for(key: Path) -> str:
@@ -67,18 +71,18 @@ class SshKeygenSigner:
     def __post_init__(self) -> None:
         object.__setattr__(self, "public_key", _public_key_for(self.key))
 
-    def sign(self, message: bytes) -> str:
+    def sign(self, message: bytes, namespace: str = sshsig.NAMESPACE) -> str:
         exe = shutil.which("ssh-keygen")
         if exe is None:
             raise NoKey("ssh-keygen is not installed")
         with tempfile.TemporaryDirectory() as tmp:
-            target = Path(tmp) / "receipt.json"
+            target = Path(tmp) / "document.json"
             target.write_bytes(message)
             # stdin and the console are left alone so OpenSSH can ask for a passphrase.
-            result = subprocess.run([exe, "-Y", "sign", "-q", "-f", str(self.key), "-n", sshsig.NAMESPACE, str(target)])
-            signature = target.with_name("receipt.json.sig")
+            result = subprocess.run([exe, "-Y", "sign", "-q", "-f", str(self.key), "-n", namespace, str(target)])
+            signature = target.with_name("document.json.sig")
             if result.returncode != 0 or not signature.exists():
-                raise NoKey("ssh-keygen did not sign the receipt")
+                raise NoKey("ssh-keygen did not sign the document")
             return signature.read_text(encoding="ascii")
 
 
@@ -92,8 +96,8 @@ class Ed25519Signer:
     def public_key(self) -> str:
         return sshsig.public_key_line(self.private_key)
 
-    def sign(self, message: bytes) -> str:
-        return sshsig.sign_ed25519(self.private_key, message)
+    def sign(self, message: bytes, namespace: str = sshsig.NAMESPACE) -> str:
+        return sshsig.sign_ed25519(self.private_key, message, namespace)
 
 
 def _config_path(home: Path) -> Path:
@@ -135,9 +139,9 @@ def principal(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "creator"
 
 
-def allowed_signers_line(identity: str, public_key: str) -> str:
-    """The line a sponsor saves as allowed_signers to check a receipt with ssh-keygen."""
-    return f'{identity} namespaces="{sshsig.NAMESPACE}" {sshsig.normalise(public_key)}'
+def allowed_signers_line(identity: str, public_key: str, namespace: str = sshsig.NAMESPACE) -> str:
+    """The line a sponsor saves as allowed_signers to check a document with ssh-keygen."""
+    return f'{identity} namespaces="{namespace}" {sshsig.normalise(public_key)}'
 
 
 def _name(common: str) -> x509.Name:

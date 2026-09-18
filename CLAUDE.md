@@ -31,6 +31,7 @@
 - **`--source` is required on `seal`.** The tool cannot know how an asset was made, and C2PA's claim of creation states it. No default.
 - **Disclosed, not covert.** The receipt tells the sponsor the file is marked.
 - **A missing watermark proves nothing.** TrustMark ships a removal model. No copy may treat absence as evidence.
+- **The delivery report is the log's signed index, and it hides nothing.** `sponsifable report <deal>` folds the on-air log through `onair.delivery()`, binds the log's SHA-256 into the document, and signs it with the creator's SSH key under its own SSHSIG namespace, `sponsifable-delivery`, so a report signature can never pass as a receipt signature or the reverse. Disagreements and an interval the logger stopped inside go in with a count and a time. The notice says the recording is the evidence and the report only says where to look, and it names the platform's retention so the sponsor checks in time. It carries no price.
 - **The CLI does not price.** `verify` reports facts. The overrun invoice is composed in TypeScript from `benchmarks.ts`, so market assumptions stay in one file.
 
 ### Shop window board (see `design/shop-window/`)

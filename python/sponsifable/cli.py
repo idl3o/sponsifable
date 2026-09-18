@@ -4,6 +4,7 @@
     sponsifable seal DEAL FILE      establish rights on a won deal, before delivery
     sponsifable verify FILE         check a downloaded ad against your seals
     sponsifable log DEAL            record when a deal's overlay was on air, from OBS
+    sponsifable report DEAL         sign what the log says was on air, for the sponsor
     sponsifable key --ssh PATH      choose the SSH key that signs your receipts
     sponsifable setup               download the watermark model now
 """
@@ -83,6 +84,11 @@ def _parser() -> argparse.ArgumentParser:
     log.add_argument("--url", default="ws://127.0.0.1:4455", help="where OBS's WebSocket server is listening")
     log.add_argument("--poll", type=float, default=2.0, help="seconds of quiet before asking OBS directly")
     log.add_argument("--workspace", type=Path, help=_WORKSPACE_HELP)
+
+    rep = sub.add_parser("report", help="sign a delivery report from the on-air log, for the sponsor")
+    rep.add_argument("deal", help="deal id, shown in the app's Deals tab, e.g. dl-104")
+    rep.add_argument("--vod", default="", help="the recording's address, so the sponsor can open it at the offsets")
+    rep.add_argument("--workspace", type=Path, help=_WORKSPACE_HELP)
 
     key = sub.add_parser("key", help="choose or show the SSH key that signs your receipts")
     key.add_argument("--ssh", type=Path, help="path to your SSH private key, e.g. ~/.ssh/id_ed25519")
@@ -235,6 +241,64 @@ def _log(args: argparse.Namespace, home: Path) -> int:
     return 0
 
 
+def _write_report(home: Path, deal: dict, delivery, log_path: Path, vod: str, creator: str, signer) -> tuple[dict, list[Path]]:  # noqa: ANN001
+    """Build, sign and write the report. Raises keys.NoKey if signing fails."""
+    import hashlib
+    from datetime import datetime, timezone
+
+    from . import receipt
+    from . import report as reports
+
+    body = reports.build_report(
+        deal, delivery,
+        creator=creator,
+        public_key=sshsig.normalise(signer.public_key),
+        reported_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        log_sha256=hashlib.sha256(log_path.read_bytes()).hexdigest(),
+        vod_url=vod,
+    )
+    signed = receipt.canonical(body)
+    signature = signer.sign(signed, reports.NAMESPACE)
+    identity = keys.principal(creator)
+    notice = reports.sponsor_notice(
+        body,
+        fingerprint=sshsig.fingerprint(body["publicKey"]),
+        allowed_signers=keys.allowed_signers_line(identity, body["publicKey"], reports.NAMESPACE),
+        identity=identity,
+    )
+    return body, reports.write(home, body, signature, notice, signed)
+
+
+def _report(args: argparse.Namespace, home: Path) -> int:
+    """Fold the on-air log, sign it, and write the sponsor's files."""
+    from . import onair
+    from . import report as reports
+
+    deal = _log_deal(args, home)
+    if deal is None:
+        return 1
+    log_path = onair.log_path(home, args.deal)
+    delivery = onair.delivery(onair.read_log(log_path))
+    if not delivery.intervals and delivery.open_since is None:
+        print(f"Nothing on air is recorded for {args.deal}. Run `sponsifable log {args.deal}` during the stream first.",
+              file=sys.stderr)
+        return 1
+    creator = workspace.load(_workspace(args, home)).get("profile", {}).get("name", "")
+    try:
+        body, paths = _write_report(home, deal, delivery, log_path, args.vod, creator, keys.signer_for(home))
+    except keys.NoKey as error:
+        print(f"Not signed: {error}.", file=sys.stderr)
+        return 1
+    minutes = body["totalSeconds"] / 60
+    print(f"On air {minutes:.1f} minutes across {len(body['intervals'])} intervals. "
+          f"Signed with {sshsig.fingerprint(body['publicKey'])}.")
+    if body["disagreements"] or body["openSince"]:
+        print("The report names what the log could not settle; read the .txt before sending it.")
+    print(f"  Send the sponsor: {', '.join(p.name for p in paths)}")
+    print(f"                    from {reports.reports_dir(home)}")
+    return 0
+
+
 def _key(args: argparse.Namespace, home: Path) -> int:
     """Choose or show the SSH key that signs receipts."""
     try:
@@ -272,6 +336,8 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(_verify(args, home))
     elif args.command == "log":
         sys.exit(_log(args, home))
+    elif args.command == "report":
+        sys.exit(_report(args, home))
     elif args.command == "key":
         sys.exit(_key(args, home))
     elif args.command == "setup":

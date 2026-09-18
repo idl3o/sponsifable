@@ -53,7 +53,7 @@ Found along the way:
 - **A sponsor asset in the overlay.** Today it draws the label and the brand. An asset, its placement and its size need a model of their own.
 - **Overlay pricing**, which needs its own cited evidence before any benchmark.
 - **The deal panel as a custom dock.** The offer evaluator itself is built (d1aec61).
-- **The signed delivery report**, which is the log indexed into the VOD.
+- ~~The signed delivery report~~, built 2026-09-18 as `sponsifable report`. Still owed: a way to attach the report to the deal in the app, and a verify path for a sponsor who wants more than `ssh-keygen`.
 - **Payment**, shelved on `sandbox/lightning`, whose workspace format must be renumbered 4 to 5 before it is revived.
 - **The framework majors** (React 19, zustand 5, immer 11), deferred twice now.
 - **The rename**, and the README's silence about the OBS tool until it ships.
