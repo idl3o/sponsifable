@@ -55,6 +55,10 @@
 - **The overlay never draws a price and always draws the disclosure.** `OverlayView` has no price field, and `overlayFor` always sets `disclosure: 'Ad'`. The ASA, CMA and FTC require it, and the creator is the one who answers for a missing label.
 - **The overlay fails silently.** A failed read keeps the last good frame; an overlay that never loaded draws nothing. It asks OBS for no permissions and times nothing.
 - **The overlay URL uses `/overlay.html`,** not the server's `/overlay` alias, so it also works under Vite.
+- **The on-air log is append-only, and lives beside the ledger,** at `~/.sponsorable/onair/<deal>.jsonl`, never inside the workspace: it grows per stream and it is evidence. `onair.delivery()` is the only reader of its shape, so the app and a delivery report cannot count differently.
+- **On air means live *and* in the program feed.** Showing in preview is not being broadcast. Events are prompts; the `GetSourceActive` poll is the arbiter, because activation signals have been unreliable in studio mode. Every disagreement is recorded and the summary carries the count. Never smooth them away.
+- **An interval's offset into the VOD is null unless the logger saw the stream start.** The log's job is to be an index into the recording, and an offset from a start nobody saw is a guess.
+- **`python/sponsorable/obs.py` is the one copy of the protocol layer.** `scripts/obs_probe.py` imports it, falling back to adding `python/` to `sys.path` when the package is not installed.
 - `src/store/sync.ts` and `src/store/workspaceClient.ts` are the I/O edge for the workspace, outside `src/domain`. `sync.ts` takes its fetch, storage and focus hook as arguments, so it is tested in node.
 
 ## Gotchas already resolved — do not regress
@@ -73,6 +77,7 @@
 - **Workspace format changes go through `src/domain/workspace.ts`.** Bump `WORKSPACE_VERSION`, teach `parseWorkspace` the old shape, and bump `SUPPORTED_VERSION` in `python/sponsorable/workspace.py`. The localStorage key stays `sponsorable-v1` on purpose; `persist.version` tracks the format. An unreadable save is copied to `sponsorable-unreadable-v<n>`, never dropped. The file's `version` must equal `SUPPORTED_VERSION`, or the server refuses the write.
 - **The workspace file carries no `seq`.** `importAll` sets `seq = max(seq, seqFloor(workspace))`, or a loaded file's ids could be reused.
 - **`npm run dev` alone saves to the browser only.** Run `npm run dev:api` beside it: Vite proxies `/api` to 127.0.0.1:5181. On a first run the app's probe for the file logs a 404 in the console; that is the missing file, not a fault.
+- **Fetch settles on headers, not on the body.** A response whose body is never read keeps the request open: it stalls `networkidle` and leaks a connection per write in a browser that stays open for a whole stream. `workspaceClient.ts` drains every body it does not parse, by reading it — cancelling aborts the request instead, which shows up as a failed request.
 - **The server needs `Content-Length` on writes.** It does not read chunked bodies. Browsers always send the length; Node's `http.request` with `req.write()` does not unless told.
 - **TrustMark decoding must stay strict** (`schema == BCH_SUPER and len == 40`). Its decoder auto-detects the schema, and 8 of 400 clean images passed as a weaker one.
 - **TrustMark will not decode a pure-noise image.** Test covers must be structured; the survival script uses real frames or drawn shapes.

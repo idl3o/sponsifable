@@ -49,10 +49,10 @@ Found along the way:
 
 ## What the pivot still owes
 
-- **The on-air log.** `scripts/obs_probe.py` has never been run against real OBS. The logger is not built, and two choices are open: the `websockets` package or a client written here, and whether the OBS password is asked for each session or kept in the OS keyring.
+- **The on-air log.** Built as `sponsorable log <deal>` (22fab30), against a fake OBS. Still owed: a run against real OBS, starting and stopping it from the app rather than a second terminal, and the signed delivery report. The `websockets` package won over a hand-rolled client, and the password is asked for per session rather than kept in a keyring.
 - **A sponsor asset in the overlay.** Today it draws the label and the brand. An asset, its placement and its size need a model of their own.
 - **Overlay pricing**, which needs its own cited evidence before any benchmark.
-- **The offer evaluator**, and later the deal panel as a custom dock.
+- **The deal panel as a custom dock.** The offer evaluator itself is built (d1aec61).
 - **The signed delivery report**, which is the log indexed into the VOD.
 - **Payment**, shelved on `sandbox/lightning`, whose workspace format must be renumbered 4 to 5 before it is revived.
 - **The framework majors** (React 19, zustand 5, immer 11), deferred twice now.
