@@ -44,10 +44,10 @@ dev = ["pytest>=8", "markdown>=3.5"]
 sponsifable = "sponsifable.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/idl3o/sponsorable"
-Documentation = "https://github.com/idl3o/sponsorable/blob/main/docs/provenance.md"
-Issues = "https://github.com/idl3o/sponsorable/issues"
-Source = "https://github.com/idl3o/sponsorable"
+Homepage = "https://github.com/idl3o/sponsifable"
+Documentation = "https://github.com/idl3o/sponsifable/blob/main/docs/provenance.md"
+Issues = "https://github.com/idl3o/sponsifable/issues"
+Source = "https://github.com/idl3o/sponsifable"
 
 # One version, in one place: the tag, the package and `sponsifable --version`
 # cannot disagree. The release workflow refuses a tag that does not match.

@@ -30,14 +30,13 @@ Every migration below was a no-op on the day. Nothing had been published to PyPI
 
 ## What deliberately did not move
 
-- **The GitHub repository** is still `idl3o/sponsorable`, and every URL in the docs still points there. Renaming it is the author's to do; GitHub redirects both ways afterwards, so the links keep working either way. Update them when the repository moves, not before.
-- **`docs/archive/2026-09-the-defensible-number.md`.** A published paper takes errata, not edits. Its only mention of the old name is the repository URL in its colophon, which is accurate as written.
 - **The timestamp fixture's digest.** `python/tests/test_timestamp.py` hashes the literal bytes `sponsorable api probe`, because those are the bytes DigiCert signed in September 2026. A rename cannot change what a timestamp covers, and a test that pretended otherwise would be testing nothing.
 - **A save written under the old browser key.** `adoptRenamedSave()` in `useStore.ts` copies a `sponsorable-v1` save to the new key once, and leaves the original where it is. A creator who had only ever run `npm run dev` kept their work in the browser and nowhere else; renaming the key without this would have stranded it. Remove it once no such browser can plausibly remain.
 
+The GitHub repository was renamed to `idl3o/sponsifable` the same day, and the old name redirects to it. Every URL in the docs and `package.json` now points at the new one, including the colophon of `docs/archive/2026-09-the-defensible-number.md`, which is still a working draft. Once that paper is marked published, a change like this becomes an erratum.
+
 ## Still to do
 
-- **Rename the repository** on GitHub, then update the URLs in the docs and `package.json`.
 - **Reserve `sponsifable`** on PyPI and TestPyPI before the first release, and set up trusted publishing for it (see `docs/RELEASING.md`).
 - **Search the UK trademark register.** This has not been done for any candidate, and it is the check that matters legally.
 

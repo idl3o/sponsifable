@@ -28,7 +28,7 @@ MIT licensed. No account, no remote server, no telemetry. Built for a creator wh
 
 **Keeps a deal log.** Every outcome, won or lost, is recorded against the price the card quoted, with the audience and terms frozen as they stood. It tells you whether you are being negotiated down, and whether the fit score predicts anything for you. If you choose to, one button opens the project's rate-data form with the deal filled in, rounded so it cannot identify you. Lost deals count too: they are the half of the market no rate survey ever sees.
 
-**Seals what you deliver, if you ask it to.** A sponsor who keeps your whitelisted ad running on day 90 has bought the ninety-day licence at the thirty-day price. `sponsifable seal` watermarks the file before delivery, signs a licence receipt, and has it timestamped. If the ad later turns up in a public ad library, `sponsifable verify` checks it, and the app prices the overrun as the further 30-day periods the sponsor took. It is opt-in per deal, and it cannot be applied after delivery: the evidence, not the app, enforces that. Receipts are signed with your own SSH key, so a sponsor can check one with `ssh-keygen`, which is already on their machine. [docs/provenance.md](https://github.com/idl3o/sponsorable/blob/main/docs/provenance.md) explains how, and what it cannot do.
+**Seals what you deliver, if you ask it to.** A sponsor who keeps your whitelisted ad running on day 90 has bought the ninety-day licence at the thirty-day price. `sponsifable seal` watermarks the file before delivery, signs a licence receipt, and has it timestamped. If the ad later turns up in a public ad library, `sponsifable verify` checks it, and the app prices the overrun as the further 30-day periods the sponsor took. It is opt-in per deal, and it cannot be applied after delivery: the evidence, not the app, enforces that. Receipts are signed with your own SSH key, so a sponsor can check one with `ssh-keygen`, which is already on their machine. [docs/provenance.md](https://github.com/idl3o/sponsifable/blob/main/docs/provenance.md) explains how, and what it cannot do.
 
 ---
 
@@ -36,13 +36,13 @@ MIT licensed. No account, no remote server, no telemetry. Built for a creator wh
 
 The application is a few thousand lines of TypeScript. Anyone could write it.
 
-The hard part sits in one file: [`src/domain/benchmarks.ts`](https://github.com/idl3o/sponsorable/blob/main/src/domain/benchmarks.ts). It holds every market assumption the tool makes — cost-per-thousand bands for each platform and format, category multipliers, geography weights, platform-median engagement rates, production floors, and the uplifts for exclusivity and usage rights.
+The hard part sits in one file: [`src/domain/benchmarks.ts`](https://github.com/idl3o/sponsifable/blob/main/src/domain/benchmarks.ts). It holds every market assumption the tool makes — cost-per-thousand bands for each platform and format, category multipliers, geography weights, platform-median engagement rates, production floors, and the uplifts for exclusivity and usage rights.
 
 Those numbers are seeded from publicly circulated creator rates for 2025 and 2026. They are not audited market data, and the app says so on the rate card rather than presenting a guess as a quote.
 
 **This is where contributions matter most.** If you have been paid for a placement, you know something the table does not. A single real data point — platform, format, audience size, category, what you were actually paid, and what rights the sponsor got — is worth more to this project than a refactor. Rates also drift, so a table that is right today is wrong in eighteen months without people correcting it.
 
-The guard against bad edits is [`src/domain/calibration.test.ts`](https://github.com/idl3o/sponsorable/blob/main/src/domain/calibration.test.ts), which runs nine realistic creator archetypes end to end and asserts each headline price lands somewhere a working creator would recognise. Change a band, run the sweep, and see what moved:
+The guard against bad edits is [`src/domain/calibration.test.ts`](https://github.com/idl3o/sponsifable/blob/main/src/domain/calibration.test.ts), which runs nine realistic creator archetypes end to end and asserts each headline price lands somewhere a working creator would recognise. Change a band, run the sweep, and see what moved:
 
 ```
 npx vitest run calibration --reporter=verbose
@@ -54,7 +54,7 @@ Large entertainment YouTuber  YouTube 60–90s integration  400,000 views £4,20
 ...
 ```
 
-See [CONTRIBUTING.md](https://github.com/idl3o/sponsorable/blob/main/CONTRIBUTING.md) for how to submit a rate, and what the project will and will not accept.
+See [CONTRIBUTING.md](https://github.com/idl3o/sponsifable/blob/main/CONTRIBUTING.md) for how to submit a rate, and what the project will and will not accept.
 
 ---
 
@@ -151,6 +151,6 @@ React 18, TypeScript in strict mode, Vite, vitest, zustand. No CSS framework and
 
 ## Licence
 
-MIT. See [LICENSE](https://github.com/idl3o/sponsorable/blob/main/LICENSE).
+MIT. See [LICENSE](https://github.com/idl3o/sponsifable/blob/main/LICENSE).
 
 If this helps you land a sponsorship, the project would like to know what you were paid and what the table got wrong. That is the whole contribution loop.
